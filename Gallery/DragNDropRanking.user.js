@@ -64,7 +64,7 @@
 		console.log("Detected an ordering page, preparing to GUI-rank!");
 
 		// Make sure the ordering properly starts at 1 and increments by 1
-		rerankAllObjects();
+		setupDraggableItems();
 
 		if (RELOCATE_SUBMIT_BUTTON) {
 			// Move the submit button somewhere useful
@@ -76,9 +76,12 @@
 		}
 	}
 
-	function rerankAllObjects() {
+	function setupDraggableItems() {
 		ordering = [];
 		$('img[src^="http://images.neopets.com/items/"]').parent().each(function(){
+			// Make imgs draggable (do this first so it will be included in the saved html)
+			$(this).find("img").addClass("drag");
+            
 			// Reset the ordered rank numbers
 			var item = new Object();
 			item.imageTd = $(this).html();
@@ -86,9 +89,16 @@
 			item.rankTd = $(this).closest("tr").next().next().find("td").eq($(this).index()).html();
 			ordering.push(item);
 			setRankOfImageTd($(this), ordering.length);
+		});
+	}
 
-			// Make imgs draggable
-			$(this).find("img").addClass("drag");
+	function rerankAllObjects(startIndex, endIndex) {
+        startIndex = startIndex || 0;
+        endIndex = endIndex || $('img[src^="http://images.neopets.com/items/"]').length;
+        var currentRank = startIndex;
+		$('img[src^="http://images.neopets.com/items/"]').closest("td").slice(startIndex, endIndex+1).each(function(){
+			// Reset the ordered rank numbers
+			setRankOfImageTd($(this), ++currentRank);
 		});
 	}
 
@@ -96,6 +106,7 @@
 		var tdOfRankInputThatMatchesImage = $(td).closest("tr").next().next().find("td").eq($(td).index());
 		// Only update the rank if it is actually different than it's current value
 		if (tdOfRankInputThatMatchesImage.find("input[type=text]").val() != rank) {
+            console.log("Setting rank to: " + rank);
 			tdOfRankInputThatMatchesImage.find("input[type=text]").val(rank);
 			tdOfRankInputThatMatchesImage.find("input[type=text]").attr("data-new_rank","y");
 			tdOfRankInputThatMatchesImage.find("input[type=hidden]").attr("data-prv_rank","y");    
@@ -224,21 +235,21 @@
 				ordering.splice(targetRankIndex, 0, movedItem);
 
 				// reapply the ordered item td list to the table
-				var i = 0;
-				var tdArray = $("form[name=gallery_form]").find("tbody").first().find("tr").find("td").toArray();
-				var startIndex = max(0,min(originalRankIndex,targetRankIndex)); // take the max with 0 just to be sure no out-of-bounds occurs
-				var endIndex = min(tdArray.length,max(originalRankIndex,targetRankIndex)); // take the min with array length just to be sure no out-of-bounds occurs
-				for (j = startIndex; j < endIndex; j++) {
-					if ($(tdArray[j]).find("img").length > 0) {
-						$(tdArray[j]).closest("tr").next().next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[i].rankTd));
-						$(tdArray[j]).closest("tr").next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[i].quantity));
-						$(tdArray[j]).html($(ordering[i].imageTd));
-						i++;
-					}
+				var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
+				var startIndex = Math.max(0,Math.min(originalRankIndex,targetRankIndex)); // take the max with 0 just to be sure no out-of-bounds occurs
+				var endIndex = Math.min(tdArray.length,Math.max(originalRankIndex,targetRankIndex)); // take the min with array length just to be sure no out-of-bounds occurs
+                console.log("Reordering indexes: " + startIndex + "-" + endIndex);
+                var j = startIndex;
+				while (j <= endIndex) {
+                    console.log("Reordering indexes: " + startIndex + "-" + endIndex);
+                    $(tdArray[j]).closest("tr").next().next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[j].rankTd));
+                    $(tdArray[j]).closest("tr").next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[j].quantity));
+                    $(tdArray[j]).html($(ordering[j].imageTd));
+                    j++;
 				};
 
 				// Reapply the rank numbers
-				rerankAllObjects();
+				rerankAllObjects(startIndex, endIndex);
 			}
 
 			// -----------------------------------
