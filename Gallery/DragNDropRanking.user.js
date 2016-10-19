@@ -129,6 +129,12 @@ function setRankOfImageTd(td, rank) {
 	}
 }
 
+function applyOrderingItemToGalleryTds(tdArray, ordering, index) {
+    $(tdArray[index]).closest("tr").next().next().find("td").eq($(tdArray[index]).closest("td").index()).html($(ordering[index].rankTd));
+    $(tdArray[index]).closest("tr").next().find("td").eq($(tdArray[index]).closest("td").index()).html($(ordering[index].quantity));
+    $(tdArray[index]).html($(ordering[index].imageTd));
+}
+
 // Draggable images borrowed code from: http://luke.breuer.com/tutorial/javascript-drag-and-drop-tutorial.aspx
 var _startX = 0;            // mouse starting positions
 var _startY = 0;
@@ -235,37 +241,73 @@ function OnMouseUp(e)
 
 		// Find the element at the place we dragged our item to and rank it just after that element
 		var targetElement = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
-		var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
-		var originalRankIndex = $(_dragElement).closest("tr").next().next().find("td").eq($(_dragElement).closest("td").index()).find("input[type=text]").val() - 1;
-		if ($(targetElement).is("img") && targetElement != _dragElement) {
-			// Copy new item over to avoid referencing issues on deletes
-			var movedItem = new Object();
-			movedItem.imageTd = ordering[originalRankIndex].imageTd;
-			movedItem.quantity = ordering[originalRankIndex].quantity;
-			movedItem.rankTd = ordering[originalRankIndex].rankTd;
+        var originalRankIndex = $(_dragElement).closest("tr").next().next().find("td").eq($(_dragElement).closest("td").index()).find("input[type=text]").val() - 1;
+        var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
+		if (targetElement != _dragElement) {
+            // If it's an image, we will be swapping the two items
+            if ($(targetElement).is("img")) {
+                console.log("Swapping items at ranks: " + originalRankIndex + ", " + targetRankIndex);
+                
+                // store temp for the swap
+                var temp = new Object();
+                temp.imageTd = ordering[originalRankIndex].imageTd
+                temp.quantity = ordering[originalRankIndex].quantity
+                temp.rankTd = ordering[originalRankIndex].rankTd
+                
+                ordering[originalRankIndex].imageTd = ordering[targetRankIndex].imageTd
+                ordering[originalRankIndex].quantity = ordering[targetRankIndex].quantity
+                ordering[originalRankIndex].rankTd = ordering[targetRankIndex].rankTd
 
-			// remove element from it's original index
-			ordering.splice(originalRankIndex, 1);
+                ordering[targetRankIndex].imageTd = temp.imageTd
+                ordering[targetRankIndex].quantity = temp.quantity
+                ordering[targetRankIndex].rankTd = temp.rankTd
 
-			// insert element in to new index
-			ordering.splice(targetRankIndex, 0, movedItem);
+                // reapply the ordered item td list to the table
+                var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
+                applyOrderingItemToGalleryTds(tdArray, ordering, originalRankIndex);
+                applyOrderingItemToGalleryTds(tdArray, ordering, targetRankIndex);
+                
+                // Reapply the rank numbers
+                rerankAllObjects(Math.min(originalRankIndex, targetRankIndex), Math.max(originalRankIndex, targetRankIndex));
+            } else if ($(targetElement).is("td") && $(targetElement).find("img").length > 0) {
+                // Modify the targetRankIndex if it is close to the edge of the td
+                if (originalRankIndex < targetRankIndex && e.pageX - $(targetElement).offset().left < $(targetElement).width()/2) {
+                    console.log("Dropped on the left side of the td, adjusting rank");
+                    targetRankIndex--;
+                } else if (originalRankIndex > targetRankIndex && e.pageX - $(targetElement).offset().left > $(targetElement).width()/2) {
+                    console.log("Dropped on the right side of the td, adjusting rank");
+                    targetRankIndex++;
+                }
+                
+                // If the target is a td element that contains an image, assume we placed the dragged item between items and need to splice it in
+                console.log("Splicing items at ranks: " + originalRankIndex + ", " + targetRankIndex);
+                
+                // Copy new item over to avoid referencing issues on deletes
+                var movedItem = new Object();
+                movedItem.imageTd = ordering[originalRankIndex].imageTd;
+                movedItem.quantity = ordering[originalRankIndex].quantity;
+                movedItem.rankTd = ordering[originalRankIndex].rankTd;
 
-			// reapply the ordered item td list to the table
-			var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
-			var startIndex = Math.max(0,Math.min(originalRankIndex,targetRankIndex)); // take the max with 0 just to be sure no out-of-bounds occurs
-			var endIndex = Math.min(tdArray.length,Math.max(originalRankIndex,targetRankIndex)); // take the min with array length just to be sure no out-of-bounds occurs
-			console.log("Reordering indexes: " + startIndex + "-" + endIndex);
-			var j = startIndex;
-			while (j <= endIndex) {
-				console.log("Reordering indexes: " + startIndex + "-" + endIndex);
-				$(tdArray[j]).closest("tr").next().next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[j].rankTd));
-				$(tdArray[j]).closest("tr").next().find("td").eq($(tdArray[j]).closest("td").index()).html($(ordering[j].quantity));
-				$(tdArray[j]).html($(ordering[j].imageTd));
-				j++;
-			};
+                // remove element from it's original index
+                ordering.splice(originalRankIndex, 1);
 
-			// Reapply the rank numbers
-			rerankAllObjects(startIndex, endIndex);
+                // insert element in to new index
+                ordering.splice(targetRankIndex, 0, movedItem);
+
+                // reapply the ordered item td list to the table
+                var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
+                var startIndex = Math.max(0,Math.min(originalRankIndex,targetRankIndex)); // take the max with 0 just to be sure no out-of-bounds occurs
+                var endIndex = Math.min(tdArray.length,Math.max(originalRankIndex,targetRankIndex)); // take the min with array length just to be sure no out-of-bounds occurs
+                console.log("Reordering indexes: " + startIndex + "-" + endIndex);
+                var j = startIndex;
+                while (j <= endIndex) {
+                    applyOrderingItemToGalleryTds(tdArray, ordering, j);
+                    j++;
+                };
+
+                // Reapply the rank numbers
+                rerankAllObjects(startIndex, endIndex);
+            }
 		}
 
 		// -----------------------------------
