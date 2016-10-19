@@ -91,12 +91,28 @@ function setupDraggableItems() {
 		setRankOfImageTd($(this), ordering.length);
 	});
 }
+	
+function setupDraggableItems() {
+	ordering = [];
+	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').parent().each(function(){
+		// Make imgs draggable (do this first so it will be included in the saved html)
+		$(this).find("img").addClass("drag");
+	  
+		// Reset the ordered rank numbers
+		var item = new Object();
+		item.imageTd = $(this).html();
+		item.quantity = $(this).closest("tr").next().find("td").eq($(this).index()).html();
+		item.rankTd = $(this).closest("tr").next().next().find("td").eq($(this).index()).html();
+		ordering.push(item);
+		setRankOfImageTd($(this), ordering.length);
+	});
+}
 
 function rerankAllObjects(startIndex, endIndex) {
 	startIndex = startIndex || 0;
-	endIndex = endIndex || $('img[src^="http://images.neopets.com/items/"]').length;
+	endIndex = endIndex || $("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').length;
 	var currentRank = startIndex;
-	$('img[src^="http://images.neopets.com/items/"]').closest("td").slice(startIndex, endIndex+1).each(function(){
+	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').closest("td").slice(startIndex, endIndex+1).each(function(){
 		// Reset the ordered rank numbers
 		setRankOfImageTd($(this), ++currentRank);
 	});
