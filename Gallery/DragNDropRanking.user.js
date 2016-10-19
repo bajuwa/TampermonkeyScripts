@@ -10,38 +10,52 @@
 /* jshint -W097 */
 'use strict';
 
+// --------------------------
+// USER-CONTROLLED SETTINGS
+// --------------------------
+
+var CATEGORY_SUMMARY_ENABLED = true; // if 'true', it will show a panel in the top left summarizing categories and item counts
+var RELOCATE_SUBMIT_BUTTON = true;   // if 'true', it will move the submit button to always be in the top right corner
+
+// ------------------------------
+// END USER-CONTROLLED SETTINGS
+// DO NOT MODIFY ANYTHING BELOW
+// ------------------------------
+
 var $ = window.jQuery;
 
-// Find all the category names
-var categories = [];
-$('select[name^="user_cat_arr"] option:selected').each(function(){
-    if (categories.indexOf($(this).text()) < 0) {
-        categories.push($(this).text());
-    }
-});
+if (CATEGORY_SUMMARY_ENABLED) {
+    // Find all the category names
+    var categories = [];
+    $('select[name^="user_cat_arr"] option:selected').each(function(){
+        if (categories.indexOf($(this).text()) < 0) {
+            categories.push($(this).text());
+        }
+    });
 
-// If we are on a page that supports categorization...
-if (categories.length > 0) {
-    // Count how many items belong to each category
-    for (var i = 0; i < categories.length; i++) {
-        categories[i] = [categories[i], $('select[name^="user_cat_arr"] option:selected').filter(function(){
-            return $(this).text() == categories[i];
-        }).length];
-    }
+    // If we are on a page that supports categorization...
+    if (categories.length > 0) {
+        // Count how many items belong to each category
+        for (var i = 0; i < categories.length; i++) {
+            categories[i] = [categories[i], $('select[name^="user_cat_arr"] option:selected').filter(function(){
+                return $(this).text() == categories[i];
+            }).length];
+        }
 
-    // Sort the categories from least to most items
-    categories.sort(function(a, b) {return a[1] - b[1]});
+        // Sort the categories from least to most items
+        categories.sort(function(a, b) {return a[1] - b[1];});
 
-    // Display a list of the counts
-    var el = document.createElement("div");
-    el.setAttribute("style","text-align:left;position:fixed;top:0%;left:0%;background-color:white;font-weight: bold;");
-    var innerHTML = "<table>";
-    for (var i = 0; i < categories.length; i++) {
-        innerHTML += "<tr><td> " + categories[i][0] + ": </td><td>" + categories[i][1] + "</td></tr>";
+        // Display a list of the counts
+        var el = document.createElement("div");
+        el.setAttribute("style","text-align:left;position:fixed;top:0%;left:0%;background-color:white;font-weight: bold;");
+        var innerHTML = "<table>";
+        for (var i = 0; i < categories.length; i++) {
+            innerHTML += "<tr><td> " + categories[i][0] + ": </td><td>" + categories[i][1] + "</td></tr>";
+        }
+        innerHTML += "</table>";
+        el.innerHTML += innerHTML;
+        document.body.appendChild(el);
     }
-    innerHTML += "</table>";
-    el.innerHTML += innerHTML;
-    document.body.appendChild(el);
 }
 
 // If we are on a page that supports ordering...
@@ -52,12 +66,14 @@ if (window.location.href.indexOf("dowhat=rank") >= 0) {
     // Make sure the ordering properly starts at 1 and increments by 1
     rerankAllObjects();
 
-    // Move the submit button somewhere useful
-    $(".save_rank").css({
-        "position":"fixed",
-        "top":"0",
-        "right":"0"
-    });
+    if (RELOCATE_SUBMIT_BUTTON) {
+        // Move the submit button somewhere useful
+        $(".save_rank").css({
+            "position":"fixed",
+            "top":"0",
+            "right":"0"
+        });
+    }
 }
 
 function rerankAllObjects() {
@@ -183,10 +199,10 @@ function OnMouseUp(e)
         document.onselectstart = null;
         _dragElement.ondragstart = null;
 
-		// -----------------------------------
-		// START CODE MODIFICATIONS BY: bajuwa
-		// -----------------------------------
-		
+        // -----------------------------------
+        // START CODE MODIFICATIONS BY: bajuwa
+        // -----------------------------------
+
         // Find the element at the place we dragged our item to and rank it just after that element
         var targetElement = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
         var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
@@ -197,13 +213,13 @@ function OnMouseUp(e)
             movedItem.imageTd = ordering[originalRankIndex].imageTd;
             movedItem.quantity = ordering[originalRankIndex].quantity;
             movedItem.rankTd = ordering[originalRankIndex].rankTd;
-            
+
             // remove element from it's original index
             ordering.splice(originalRankIndex, 1);
-            
+
             // insert element in to new index
             ordering.splice(targetRankIndex, 0, movedItem);
-            
+
             // reapply the ordered item td list to the table
             var i = 0;
             var tdArray = $("form[name=gallery_form]").find("tbody").first().find("tr").find("td").toArray();
@@ -215,15 +231,15 @@ function OnMouseUp(e)
                     i++;
                 }
             };
-                    
+
             // Reapply the rank numbers
             rerankAllObjects();
         }
-		
-		// -----------------------------------
-		//  END CODE MODIFICATIONS BY: bajuwa
-		// -----------------------------------
-        
+
+        // -----------------------------------
+        //  END CODE MODIFICATIONS BY: bajuwa
+        // -----------------------------------
+
         // this is how we know we're not dragging      
         _dragElement = null;
 
