@@ -270,9 +270,7 @@ function OnMouseUp(e)
                 // Reapply the rank numbers
                 rerankAllObjects(Math.min(originalRankIndex, targetRankIndex), Math.max(originalRankIndex, targetRankIndex));
             } else if ($(targetElement).is("td") && $(targetElement).find("img").length > 0) {
-                // Modify the targetRankIndex if it is close to the left side of the td
-                console.log(e.offsetX - $(targetElement).offsetLeft);
-                console.log($(targetElement).width()/2);
+                // Modify the targetRankIndex if it is close to the edge of the td
                 if (originalRankIndex < targetRankIndex && e.pageX - $(targetElement).offset().left < $(targetElement).width()/2) {
                     console.log("Dropped on the left side of the td, adjusting rank");
                     targetRankIndex--;
