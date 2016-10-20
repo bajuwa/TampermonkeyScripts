@@ -85,7 +85,10 @@ function setupDraggableItems() {
 		// Make imgs draggable (do this first so it will be included in the saved html)
 		$(this).addClass("drag");
         $(this).attr("data-old_background", $(this).css("background") == null ? "inherit" : $(this).css("background"));
+        $(this).closest("td").attr("data-old_border_left", $(this).closest("td").css("border-left") == null ? "initial" : $(this).closest("td").css("border-left"));
+        $(this).closest("td").attr("data-old_border_right", $(this).closest("td").css("border-right") == null ? "initial" : $(this).closest("td").css("border-right"));
         addMouseEventsToItem($(this));
+        addMouseEventsToItem($(this).closest("td"));
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
@@ -98,15 +101,32 @@ function setupDraggableItems() {
 }
 
 function addMouseEventsToItem(item) {
-    $(item).hover(function(){
-        if (_dragElement != null && $(this) != $(_dragElement) && $(item) != $(_dragElement).closest("td")) {
-            $(item).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
-            $(item).closest("td").css({ "opacity" : "0.5" });
-        }
-    },function(){
-        $(item).closest("td").css({ "background" : $(item).attr("data-old_background") });
-        $(item).closest("td").css({ "opacity" : "1" });
-    });
+    console.log($(item)[0].tagName);
+    if ($(item)[0].tagName === 'IMG') {
+        $(item).hover(function(){
+            if (_dragElement != null && $(this) != $(_dragElement)) {
+                $(item).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
+                $(item).closest("td").css({ "opacity" : "0.5" });
+            }
+        },function(){
+            $(item).closest("td").css({ "background" : $(item).attr("data-old_background") });
+            $(item).closest("td").css({ "opacity" : "1" });
+        });
+    } else if ($(item)[0].tagName === 'TD') {
+        $(item).hover(function(e){
+            if (_dragElement != null && $(item) != $(_dragElement).closest("td")) {
+                console.log("hovering over an td - choosing side to highlight");
+                if (e.pageX - $(item).offset().left < $(item).width()/2) {
+                    $(item).css({ "border-left" : "1px solid " + HIGHLIGHT_COLOUR });
+                } else {
+                    $(item).css({ "border-right" : "1px solid " + HIGHLIGHT_COLOUR });
+                }
+            }
+        },function(e){
+            $(item).css({ "border-left" : $(item).attr("data-old_border_left") });
+            $(item).css({ "border-right" : $(item).attr("data-old_border_right") });
+        });
+    }
 }
 
 function rerankAllObjects(startIndex, endIndex) {
