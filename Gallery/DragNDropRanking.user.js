@@ -26,7 +26,6 @@ var HIGHLIGHT_COLOUR = "#68ebeb";       // The colour of the backgrounds/highlig
 console.log = function() {};
 var $ = window.jQuery;
 var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
-var previousHighlightedElement;           // needs to be passed from OnMouseDown to OnMouseMove
 
 if (CATEGORY_SUMMARY_ENABLED) {
 	// Find all the category names
@@ -343,9 +342,6 @@ function OnMouseUp(e)
                 rerankAllObjects(startIndex, endIndex);
             }
 		}
-        
-        $(_dragElement).closest("td").css({ "background" : "none" });
-        $(previousHighlightedElement).closest("td").css({ "background" : "none" });
 
 		// -----------------------------------
 		//  END CODE MODIFICATIONS BY: bajuwa
@@ -353,7 +349,6 @@ function OnMouseUp(e)
 
 		// this is how we know we're not dragging      
 		_dragElement = null;
-        previousHighlightedElement = null;
 
 		console.log('mouse up');
 	}
