@@ -81,29 +81,27 @@ if (window.location.href.indexOf("dowhat=rank") >= 0) {
 	
 function setupDraggableItems() {
 	ordering = [];
-	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').parent().each(function(){
+	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').each(function(){
 		// Make imgs draggable (do this first so it will be included in the saved html)
-		$(this).find("img").addClass("drag");
-        $(this).css({ "border-left" : "1px solid transparent" });
-        $(this).css({ "border-right" : "1px solid transparent" });
+		$(this).addClass("drag");
         $(this).attr("data-old_background", $(this).css("background") == null ? "inherit" : $(this).css("background"));
         $(this).hover(function(){
             if (_dragElement != null && $(this) != $(_dragElement) && $(this) != $(_dragElement).closest("td")) {
-                $(this).css({ "background" : HIGHLIGHT_COLOUR });
-                $(this).css({ "opacity" : "0.5" });
+                $(this).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
+                $(this).closest("td").css({ "opacity" : "0.5" });
             }
         },function(){
-            $(this).css({ "background" : $(this).attr("data-old_background") });
-            $(this).css({ "opacity" : "1" });
+            $(this).closest("td").css({ "background" : $(this).attr("data-old_background") });
+            $(this).closest("td").css({ "opacity" : "1" });
         });
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
-		item.imageTd = $(this).html();
-		item.quantity = $(this).closest("tr").next().find("td").eq($(this).index()).html();
-		item.rankTd = $(this).closest("tr").next().next().find("td").eq($(this).index()).html();
+		item.imageTd = $(this).closest("td").html();
+		item.quantity = $(this).closest("tr").next().find("td").eq($(this).closest("td").index()).html();
+		item.rankTd = $(this).closest("tr").next().next().find("td").eq($(this).closest("td").index()).html();
 		ordering.push(item);
-		setRankOfImageTd($(this), ordering.length);
+		setRankOfImageTd($(this).closest("td"), ordering.length);
 	});
 }
 
@@ -191,7 +189,7 @@ function OnMouseDown(e)
 		_oldZIndex = target.style.zIndex;
 		_oldLeft = target.style.left;
 		_oldTop = target.style.top;
-		target.style.zIndex = 100;
+		target.style.zIndex = -1;
 
 		// we need to access the element in OnMouseMove
 		_dragElement = target;
@@ -247,6 +245,9 @@ function OnMouseUp(e)
 
 		// Find the element at the place we dragged our item to and rank it just after that element
 		var targetElement = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
+        $(targetElement).closest("td").css({ "background" : $(targetElement).attr("data-old_background") });
+        $(targetElement).closest("td").css({ "opacity" : "1" });
+        
         var originalRankIndex = $(_dragElement).closest("tr").next().next().find("td").eq($(_dragElement).closest("td").index()).find("input[type=text]").val() - 1;
         var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
 		if (targetElement != _dragElement) {
