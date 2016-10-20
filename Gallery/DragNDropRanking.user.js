@@ -85,15 +85,7 @@ function setupDraggableItems() {
 		// Make imgs draggable (do this first so it will be included in the saved html)
 		$(this).addClass("drag");
         $(this).attr("data-old_background", $(this).css("background") == null ? "inherit" : $(this).css("background"));
-        $(this).hover(function(){
-            if (_dragElement != null && $(this) != $(_dragElement) && $(this) != $(_dragElement).closest("td")) {
-                $(this).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
-                $(this).closest("td").css({ "opacity" : "0.5" });
-            }
-        },function(){
-            $(this).closest("td").css({ "background" : $(this).attr("data-old_background") });
-            $(this).closest("td").css({ "opacity" : "1" });
-        });
+        addMouseEventsToItem($(this));
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
@@ -103,6 +95,18 @@ function setupDraggableItems() {
 		ordering.push(item);
 		setRankOfImageTd($(this).closest("td"), ordering.length);
 	});
+}
+
+function addMouseEventsToItem(item) {
+    $(item).hover(function(){
+        if (_dragElement != null && $(this) != $(_dragElement) && $(item) != $(_dragElement).closest("td")) {
+            $(item).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
+            $(item).closest("td").css({ "opacity" : "0.5" });
+        }
+    },function(){
+        $(item).closest("td").css({ "background" : $(item).attr("data-old_background") });
+        $(item).closest("td").css({ "opacity" : "1" });
+    });
 }
 
 function rerankAllObjects(startIndex, endIndex) {
@@ -130,6 +134,7 @@ function applyOrderingItemToGalleryTds(tdArray, ordering, index) {
     $(tdArray[index]).closest("tr").next().next().find("td").eq($(tdArray[index]).closest("td").index()).html($(ordering[index].rankTd));
     $(tdArray[index]).closest("tr").next().find("td").eq($(tdArray[index]).closest("td").index()).html($(ordering[index].quantity));
     $(tdArray[index]).html($(ordering[index].imageTd));
+    addMouseEventsToItem($(tdArray[index]).find("img"));
 }
 
 // Draggable images borrowed code from: http://luke.breuer.com/tutorial/javascript-drag-and-drop-tutorial.aspx
