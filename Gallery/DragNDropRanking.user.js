@@ -16,7 +16,7 @@
 
 var CATEGORY_SUMMARY_ENABLED = true; // If 'true', it will show a panel in the top left summarizing categories and item counts
 var RELOCATE_SUBMIT_BUTTON = true;   // If 'true', it will move the submit button to always be in the top right corner
-var HIGHLIGHT_COLOUR = "#123456";       // The colour of the backgrounds/highlights that appear when hovering a dragged image over another location;  Can be either real world ("white") or hex ("#ffffff")
+var HIGHLIGHT_COLOUR = "#68ebeb";       // The colour of the backgrounds/highlights that appear when hovering a dragged image over another location;  Can be either real world ("white") or hex ("#ffffff")
 
 // ------------------------------
 // END USER-CONTROLLED SETTINGS
@@ -86,6 +86,16 @@ function setupDraggableItems() {
 		$(this).find("img").addClass("drag");
         $(this).css({ "border-left" : "1px solid transparent" });
         $(this).css({ "border-right" : "1px solid transparent" });
+        $(this).attr("data-old_background", $(this).css("background") == null ? "inherit" : $(this).css("background"));
+        $(this).hover(function(){
+            if (_dragElement != null && $(this) != $(_dragElement) && $(this) != $(_dragElement).closest("td")) {
+                $(this).css({ "background" : HIGHLIGHT_COLOUR });
+                $(this).css({ "opacity" : "0.5" });
+            }
+        },function(){
+            $(this).css({ "background" : $(this).attr("data-old_background") });
+            $(this).css({ "opacity" : "1" });
+        });
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
@@ -165,6 +175,10 @@ function OnMouseDown(e)
 		target.className.indexOf('drag') >= 0)
 	{
 		console.log("Starting drag");
+        
+        // Set all draggable items to half opacity to cover up the hack I've done
+        $(".drag").css("opacity","0.5");
+        
 		// grab the mouse position
 		_startX = e.clientX;
 		_startY = e.clientY;
@@ -177,10 +191,11 @@ function OnMouseDown(e)
 		_oldZIndex = target.style.zIndex;
 		_oldLeft = target.style.left;
 		_oldTop = target.style.top;
-		target.style.zIndex = 10000;
+		target.style.zIndex = 100;
 
 		// we need to access the element in OnMouseMove
 		_dragElement = target;
+        
 
 		// tell our code to start moving the element with the mouse
 		document.onmousemove = OnMouseMove;
@@ -207,51 +222,6 @@ function OnMouseMove(e)
 	// this is the actual "drag code"
 	_dragElement.style.left = (_offsetX + e.clientX - _startX) + 'px';
 	_dragElement.style.top = (_offsetY + e.clientY - _startY) + 'px';
-
-	// Code by bajuwa to support visualizations of different drag and drop features
-    var x = e.clientX,
-        y = e.clientY,
-        stack = [],
-        elementMouseIsOver = document.elementFromPoint(x, y);
-
-    stack.push(elementMouseIsOver);
-    while ((stack.length == 1 || (elementMouseIsOver.tagName !== 'IMG' && elementMouseIsOver.tagName !== 'TD')) && stack.length < 3){
-        elementMouseIsOver.style.pointerEvents = 'none';
-        elementMouseIsOver = document.elementFromPoint(x, y);
-        stack.push(elementMouseIsOver);
-    }
-
-    /* Now clean it up */
-    var i  = 0,
-        il = stack.length,
-        currentImage = null;
-
-    for (; i < il; i += 1) {
-        stack[i].style.pointerEvents = '';
-        currentImage = stack[i];
-    }
-
-    // Make imgs display hover changes
-    if (currentImage != previousHighlightedElement && (elementMouseIsOver.tagName === 'IMG' || $(currentImage).find("img").length == 1)) {
-        $(previousHighlightedElement).css({ "background" : "none" });
-        $(previousHighlightedElement).css({ "border-left" : "1px solid transparent" });
-        $(previousHighlightedElement).css({ "border-right" : "1px solid transparent" });
-        console.log("Changing borders");
-        if (currentImage.tagName === 'IMG') {
-            console.log("hovering over an image - highlight full td background");
-            $(currentImage).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
-        } else if (currentImage.tagName === 'TD') {
-            console.log("hovering over an td - choosing side to highlight");
-            if (e.pageX - $(currentImage).offset().left < $(currentImage).width()/2) {
-                $(currentImage).css({ "border-left" : "1px solid " + HIGHLIGHT_COLOUR });
-                console.log($(currentImage).css( "border-left"));
-            } else {
-                $(currentImage).css({ "border-right" : "1px solid " + HIGHLIGHT_COLOUR });
-                console.log($(currentImage).css( "border-right"));
-            }
-        }
-        previousHighlightedElement = currentImage;
-    }
 }
 
 // When the mouse is released, we remove the event handlers and reset _dragElement:
@@ -259,6 +229,9 @@ function OnMouseUp(e)
 {
 	if (_dragElement != null)
 	{
+        // Set all draggable items to back to full opacity to cover up the hack I've done
+        $(".drag").css("opacity","1");
+        
 		_dragElement.style.zIndex = _oldZIndex;
 		_dragElement.style.left = _oldLeft;
 		_dragElement.style.top = _oldTop;
