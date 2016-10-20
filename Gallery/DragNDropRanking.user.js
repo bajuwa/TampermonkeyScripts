@@ -23,6 +23,7 @@ var HIGHLIGHT_COLOUR = "#68ebeb";       // The colour of the backgrounds/highlig
 // DO NOT MODIFY ANYTHING BELOW
 // ------------------------------
 
+console.log = function() {};
 var $ = window.jQuery;
 var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
 var previousHighlightedElement;           // needs to be passed from OnMouseDown to OnMouseMove
