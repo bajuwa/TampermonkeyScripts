@@ -14,8 +14,9 @@
 // USER-CONTROLLED SETTINGS
 // --------------------------
 
-var CATEGORY_SUMMARY_ENABLED = true; // if 'true', it will show a panel in the top left summarizing categories and item counts
-var RELOCATE_SUBMIT_BUTTON = true;   // if 'true', it will move the submit button to always be in the top right corner
+var CATEGORY_SUMMARY_ENABLED = true; // If 'true', it will show a panel in the top left summarizing categories and item counts
+var RELOCATE_SUBMIT_BUTTON = true;   // If 'true', it will move the submit button to always be in the top right corner
+var HIGHLIGHT_COLOUR = "#123456";       // The colour of the backgrounds/highlights that appear when hovering a dragged image over another location;  Can be either real world ("white") or hex ("#ffffff")
 
 // ------------------------------
 // END USER-CONTROLLED SETTINGS
@@ -23,6 +24,8 @@ var RELOCATE_SUBMIT_BUTTON = true;   // if 'true', it will move the submit butto
 // ------------------------------
 
 var $ = window.jQuery;
+var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
+var previousHighlightedElement;           // needs to be passed from OnMouseDown to OnMouseMove
 
 if (CATEGORY_SUMMARY_ENABLED) {
 	// Find all the category names
@@ -75,28 +78,14 @@ if (window.location.href.indexOf("dowhat=rank") >= 0) {
 		});
 	}
 }
-
-function setupDraggableItems() {
-	ordering = [];
-	$('img[src^="http://images.neopets.com/items/"]').parent().each(function(){
-		// Make imgs draggable (do this first so it will be included in the saved html)
-		$(this).find("img").addClass("drag");
-		
-		// Reset the ordered rank numbers
-		var item = new Object();
-		item.imageTd = $(this).html();
-		item.quantity = $(this).closest("tr").next().find("td").eq($(this).index()).html();
-		item.rankTd = $(this).closest("tr").next().next().find("td").eq($(this).index()).html();
-		ordering.push(item);
-		setRankOfImageTd($(this), ordering.length);
-	});
-}
 	
 function setupDraggableItems() {
 	ordering = [];
 	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').parent().each(function(){
 		// Make imgs draggable (do this first so it will be included in the saved html)
 		$(this).find("img").addClass("drag");
+        $(this).css({ "border-left" : "1px solid transparent" });
+        $(this).css({ "border-right" : "1px solid transparent" });
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
@@ -140,7 +129,8 @@ var _startX = 0;            // mouse starting positions
 var _startY = 0;
 var _offsetX = 0;           // current element offset
 var _offsetY = 0;
-var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
+// Moved this declaration to top, needed for hover event detection
+//var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
 var _oldZIndex = 0;         // we temporarily increase the z-index during drag
 $("<style type='text/css'> .drag{ position:relative; } </style>").appendTo("head");
 
@@ -218,7 +208,50 @@ function OnMouseMove(e)
 	_dragElement.style.left = (_offsetX + e.clientX - _startX) + 'px';
 	_dragElement.style.top = (_offsetY + e.clientY - _startY) + 'px';
 
-	//console.log('(' + _dragElement.style.left + ', ' +  _dragElement.style.top + ')');  
+	// Code by bajuwa to support visualizations of different drag and drop features
+    var x = e.clientX,
+        y = e.clientY,
+        stack = [],
+        elementMouseIsOver = document.elementFromPoint(x, y);
+
+    stack.push(elementMouseIsOver);
+    while ((stack.length == 1 || (elementMouseIsOver.tagName !== 'IMG' && elementMouseIsOver.tagName !== 'TD')) && stack.length < 3){
+        elementMouseIsOver.style.pointerEvents = 'none';
+        elementMouseIsOver = document.elementFromPoint(x, y);
+        stack.push(elementMouseIsOver);
+    }
+
+    /* Now clean it up */
+    var i  = 0,
+        il = stack.length,
+        currentImage = null;
+
+    for (; i < il; i += 1) {
+        stack[i].style.pointerEvents = '';
+        currentImage = stack[i];
+    }
+
+    // Make imgs display hover changes
+    if (currentImage != previousHighlightedElement && (elementMouseIsOver.tagName === 'IMG' || $(currentImage).find("img").length == 1)) {
+        $(previousHighlightedElement).css({ "background" : "none" });
+        $(previousHighlightedElement).css({ "border-left" : "1px solid transparent" });
+        $(previousHighlightedElement).css({ "border-right" : "1px solid transparent" });
+        console.log("Changing borders");
+        if (currentImage.tagName === 'IMG') {
+            console.log("hovering over an image - highlight full td background");
+            $(currentImage).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
+        } else if (currentImage.tagName === 'TD') {
+            console.log("hovering over an td - choosing side to highlight");
+            if (e.pageX - $(currentImage).offset().left < $(currentImage).width()/2) {
+                $(currentImage).css({ "border-left" : "1px solid " + HIGHLIGHT_COLOUR });
+                console.log($(currentImage).css( "border-left"));
+            } else {
+                $(currentImage).css({ "border-right" : "1px solid " + HIGHLIGHT_COLOUR });
+                console.log($(currentImage).css( "border-right"));
+            }
+        }
+        previousHighlightedElement = currentImage;
+    }
 }
 
 // When the mouse is released, we remove the event handlers and reset _dragElement:
@@ -309,6 +342,9 @@ function OnMouseUp(e)
                 rerankAllObjects(startIndex, endIndex);
             }
 		}
+        
+        $(_dragElement).closest("td").css({ "background" : "none" });
+        $(previousHighlightedElement).closest("td").css({ "background" : "none" });
 
 		// -----------------------------------
 		//  END CODE MODIFICATIONS BY: bajuwa
@@ -316,6 +352,7 @@ function OnMouseUp(e)
 
 		// this is how we know we're not dragging      
 		_dragElement = null;
+        previousHighlightedElement = null;
 
 		console.log('mouse up');
 	}
