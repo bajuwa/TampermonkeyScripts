@@ -25,7 +25,9 @@ var HIGHLIGHT_COLOUR = "#123456";       // The colour of the backgrounds/highlig
 
 var $ = window.jQuery;
 var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
-var previousHighlightedElement;           // needs to be passed from OnMouseDown to OnMouseMove
+var previousHighlightedElement;
+var targetX = 0;
+var targetY = 0;
 
 if (CATEGORY_SUMMARY_ENABLED) {
 	// Find all the category names
@@ -86,6 +88,8 @@ function setupDraggableItems() {
 		$(this).find("img").addClass("drag");
         $(this).css({ "border-left" : "1px solid transparent" });
         $(this).css({ "border-right" : "1px solid transparent" });
+         
+        $(this).on("dragend",handleMouseUp);
 	  
 		// Reset the ordered rank numbers
 		var item = new Object();
@@ -124,24 +128,13 @@ function applyOrderingItemToGalleryTds(tdArray, ordering, index) {
     $(tdArray[index]).html($(ordering[index].imageTd));
 }
 
-// Draggable images borrowed code from: http://luke.breuer.com/tutorial/javascript-drag-and-drop-tutorial.aspx
-var _startX = 0;            // mouse starting positions
-var _startY = 0;
-var _offsetX = 0;           // current element offset
-var _offsetY = 0;
-// Moved this declaration to top, needed for hover event detection
-//var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
-var _oldZIndex = 0;         // we temporarily increase the z-index during drag
 $("<style type='text/css'> .drag{ position:relative; } </style>").appendTo("head");
 
-// The relevant events belong to the document: onMouseDown, onMouseMove, and onMouseUp.  Attempting to make drag and drop using onMouseMove of an element will result in buggy operation, as the cursor tends to jump outside of the element when it is moved quickly; when this happens, onMouseMove will stop firing until the mouse moves back over the element. Clearly, this is not desirable, so the document's mouse events are used.
-
 InitDragDrop();
-
 function InitDragDrop()
 {
 	document.onmousedown = OnMouseDown;
-	document.onmouseup = OnMouseUp;
+	document.onmousemove = getCursorXY;
 }
 
 // We start with onMouseDown:
@@ -165,118 +158,35 @@ function OnMouseDown(e)
 		target.className.indexOf('drag') >= 0)
 	{
 		console.log("Starting drag");
-		// grab the mouse position
-		_startX = e.clientX;
-		_startY = e.clientY;
-
-		// grab the clicked element's position
-		_offsetX = ExtractNumber(target.style.left);
-		_offsetY = ExtractNumber(target.style.top);
-
-		// bring the clicked element to the front while it is being dragged
-		_oldZIndex = target.style.zIndex;
-		_oldLeft = target.style.left;
-		_oldTop = target.style.top;
-		target.style.zIndex = 10000;
-
-		// we need to access the element in OnMouseMove
 		_dragElement = target;
-
-		// tell our code to start moving the element with the mouse
-		document.onmousemove = OnMouseMove;
-
-		// cancel out any text selections
-		document.body.focus();
-
-		// prevent text selection in IE
-		document.onselectstart = function () { return false; };
-		// prevent IE from trying to drag an image
-		target.ondragstart = function() { return false; };
-
-		// prevent text selection (except IE)
-		return false;
 	}
 }
 
-// Once OnMouseMove is wired up, it will fire whenever the mouse moves:
-function OnMouseMove(e)
-{
-	if (e == null) 
-		var e = window.event; 
-
-	// this is the actual "drag code"
-	_dragElement.style.left = (_offsetX + e.clientX - _startX) + 'px';
-	_dragElement.style.top = (_offsetY + e.clientY - _startY) + 'px';
-
-	// Code by bajuwa to support visualizations of different drag and drop features
-    var x = e.clientX,
-        y = e.clientY,
-        stack = [],
-        elementMouseIsOver = document.elementFromPoint(x, y);
-
-    stack.push(elementMouseIsOver);
-    while ((stack.length == 1 || (elementMouseIsOver.tagName !== 'IMG' && elementMouseIsOver.tagName !== 'TD')) && stack.length < 3){
-        elementMouseIsOver.style.pointerEvents = 'none';
-        elementMouseIsOver = document.elementFromPoint(x, y);
-        stack.push(elementMouseIsOver);
-    }
-
-    /* Now clean it up */
-    var i  = 0,
-        il = stack.length,
-        currentImage = null;
-
-    for (; i < il; i += 1) {
-        stack[i].style.pointerEvents = '';
-        currentImage = stack[i];
-    }
-
-    // Make imgs display hover changes
-    if (currentImage != previousHighlightedElement && (elementMouseIsOver.tagName === 'IMG' || $(currentImage).find("img").length == 1)) {
-        $(previousHighlightedElement).css({ "background" : "none" });
-        $(previousHighlightedElement).css({ "border-left" : "1px solid transparent" });
-        $(previousHighlightedElement).css({ "border-right" : "1px solid transparent" });
-        console.log("Changing borders");
-        if (currentImage.tagName === 'IMG') {
-            console.log("hovering over an image - highlight full td background");
-            $(currentImage).closest("td").css({ "background" : HIGHLIGHT_COLOUR });
-        } else if (currentImage.tagName === 'TD') {
-            console.log("hovering over an td - choosing side to highlight");
-            if (e.pageX - $(currentImage).offset().left < $(currentImage).width()/2) {
-                $(currentImage).css({ "border-left" : "1px solid " + HIGHLIGHT_COLOUR });
-                console.log($(currentImage).css( "border-left"));
-            } else {
-                $(currentImage).css({ "border-right" : "1px solid " + HIGHLIGHT_COLOUR });
-                console.log($(currentImage).css( "border-right"));
-            }
-        }
-        previousHighlightedElement = currentImage;
-    }
+function getCursorXY(e) {
+	targetX = (window.Event) ? e.pageX : event.clientX + (document.documentElement.scrollLeft ? document.documentElement.scrollLeft : document.body.scrollLeft);
+	targetY = (window.Event) ? e.pageY : event.clientY + (document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop);
+    console.log(targetX + ", " + targetY);
 }
 
-// When the mouse is released, we remove the event handlers and reset _dragElement:
-function OnMouseUp(e)
+function handleMouseUp()
 {
+    console.log("Mouse up!");
 	if (_dragElement != null)
 	{
-		_dragElement.style.zIndex = _oldZIndex;
-		_dragElement.style.left = _oldLeft;
-		_dragElement.style.top = _oldTop;
-
-		// we're done with these events until the next OnMouseDown
-		document.onmousemove = null;
-		document.onselectstart = null;
-		_dragElement.ondragstart = null;
-
+        console.log("Handling item drop: ");
+        console.log(_dragElement);
 		// -----------------------------------
 		// START CODE MODIFICATIONS BY: bajuwa
 		// -----------------------------------
 
 		// Find the element at the place we dragged our item to and rank it just after that element
-		var targetElement = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
+        console.log(targetX);
+        console.log(targetY);
+		var targetElement = document.elementFromPoint(targetX, targetY);
         var originalRankIndex = $(_dragElement).closest("tr").next().next().find("td").eq($(_dragElement).closest("td").index()).find("input[type=text]").val() - 1;
         var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
 		if (targetElement != _dragElement) {
+            console.log("Dropping on something other than itself, doing swap/splice");
             // If it's an image, we will be swapping the two items
             if ($(targetElement).is("img")) {
                 console.log("Swapping items at ranks: " + originalRankIndex + ", " + targetRankIndex);
@@ -304,10 +214,10 @@ function OnMouseUp(e)
                 rerankAllObjects(Math.min(originalRankIndex, targetRankIndex), Math.max(originalRankIndex, targetRankIndex));
             } else if ($(targetElement).is("td") && $(targetElement).find("img").length > 0) {
                 // Modify the targetRankIndex if it is close to the edge of the td
-                if (originalRankIndex < targetRankIndex && e.pageX - $(targetElement).offset().left < $(targetElement).width()/2) {
+                if (originalRankIndex < targetRankIndex && targetX - $(targetElement).offset().left < $(targetElement).width()/2) {
                     console.log("Dropped on the left side of the td, adjusting rank");
                     targetRankIndex--;
-                } else if (originalRankIndex > targetRankIndex && e.pageX - $(targetElement).offset().left > $(targetElement).width()/2) {
+                } else if (originalRankIndex > targetRankIndex && targetX - $(targetElement).offset().left > $(targetElement).width()/2) {
                     console.log("Dropped on the right side of the td, adjusting rank");
                     targetRankIndex++;
                 }
@@ -340,6 +250,9 @@ function OnMouseUp(e)
 
                 // Reapply the rank numbers
                 rerankAllObjects(startIndex, endIndex);
+            } else {
+                console.log("Target element not compatable with drag'n'drop");
+                console.log($(targetElement));
             }
 		}
         
