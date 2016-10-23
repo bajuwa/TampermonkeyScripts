@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoQuester - Extended Map
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @author       bajuwa
 // @match        http://www.neopets.com/games/neoquest/neoquest.phtml*
 // @run-at       document-end
