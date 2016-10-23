@@ -137,40 +137,6 @@ $('<button>Reconfigure Position</button>').click(function(){
         mapSelector.append($("<option>").attr('value',i).text(mapNames[i]));
     }
 
-    // Allow them to delete the chosen map
-    $('<button>Delete Map</button>').click(function(){
-        // Don't let the user try to delete the map they are currently on
-        if ($(mapSelector).val() >= 0 && currentLocation.length > 0 && currentLocation[Z] != $(mapSelector).val()) {
-            maps.splice($(mapSelector).val(), 1);
-            GM_setValue(GM_MAPS, JSON.stringify(maps));
-
-            // If we deleted a map index before our location, make adjustments
-            if (currentLocation[Z] > $(mapSelector).val()) {
-                currentLocation[Z]--;
-                GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(currentLocation));
-            }
-
-            // Adjust all portals
-            for (var p = 0; p < portals.length; p++) {
-                var portal = portals[p];
-                for (var pair = 0; pair < portal.length; pair++) {
-                    if (portal[pair][Z] == $(mapSelector).val()) {
-                        // If we deleted a map containing a portal, delete the entire pair
-                        portals.splice(pair,1);
-                        p--;
-                        break;
-                    } else if (portal[pair][Z] > $(mapSelector).val()) {
-                        // If we deleted a map index before any portal location, make adjustments
-                        portal[pair][Z]--;
-                    }
-                }
-            }
-            GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
-
-            $("#AutoQuesterOptions").remove();
-        }
-    }).appendTo($("#AutoQuesterMapSelector"))
-
     // Every time they choose a map, display it to the user
     $(mapSelector).change(function(){
         if ($(this).val() >= 0) {
