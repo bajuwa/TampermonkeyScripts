@@ -27,205 +27,12 @@ var Z = 0;
 
 var DEFAULT_MAP_DIMENSION = 10;
 
-GM_setValue(GM_MAP_NAMES, JSON.stringify([
-    "Temple of Roo, Level 2",
-    "Techo Cave 1",
-    "Techo Cave 2",
-    "Techo Cave 4",
-    "Techo Cave 3",
-    "Techo Cave 5",
-    "Techo Cave 6",
-    "Mountain Fortress",
-    "Techo Cave 7",
-    "Two Rings Cave",
-    "Kal Panning (initial)",
-    "Kal Panning (restored)",
-    "Ancient Neopia",
-    "Two Rings Palace, Level 1",
-    "Two Rings Palace, Level 2",
-    "Two Rings Palace, Level 3",
-    "Dank Cave, Level 2",
-    "Dank Cave, Level 3",
-    "Dank Cave, Level 4",
-    "Dank Cave, Level 1",
-    "Jungle Ruins, Dungeon Level 1",
-    "Jungle Ruins, Gors' Garden",
-    "Jungle Ruins, Dungeon Level 2",
-    "Jungle Ruins, Tower Level 1",
-    "Jungle Ruins, Dungeon Level 3",
-    "Jungle Ruins, Tower Level 2",
-    "Jungle Ruins, Tower Level 3",
-    "Jungle Ruins, Tower Level 4",
-    "Jungle Ruins, Tower Level 5",
-    "Jungle Ruins, Base Level",
-    "Temple of Roo, Level 1"
-]));
-
 // TODO: Non-blocker tiles that are actually blocker tiles cause FU
 var BLOCKING_TILES = ["water_iso", "water_lu", "water_u", "water_ru", "water_l", "water_r", "water_ld", "water_d", "water_rd", 
                       "water_lr", "water_ud", "water_t_l", "water_t_r", "water_t_u", "water_t_d", "water_x",
                       "mountain", "dirt", "stone", "dungeon_pillar", "dungeon_barrel", "dungeon_crate", "dungeon_table"];
 
-function trimMap(map) {
-    var trimmed = [0,0];
-
-    // Trim empty top rows
-    var empty = true;
-    while (empty) {
-        for (var c = 0; c < map[0].length; c++) {
-            if (map[0][c] != "" && map[0][c] != undefined) {
-                empty = false;
-                break;
-            }
-        }
-        if (empty) {
-            map.splice(0,1);
-            trimmed[0]++;
-        }
-    }
-
-    // Trim empty bottom rows
-    empty = true;
-    while (empty) {
-        for (var c = 0; c < map[map.length-1].length; c++) {
-            if (map[map.length-1][c] != "" && map[map.length-1][c] != undefined) {
-                empty = false;
-                break;
-            }
-        }
-        if (empty) {
-            map.splice(map.length-1,1);
-        }
-    }
-
-    // Trim empty left columns
-    empty = true;
-    var numOfEmptyColumns = 0;
-    while (empty) {
-        for (var r = 0; r < map.length; r++) {
-            if (map[r][numOfEmptyColumns] != "" && map[r][numOfEmptyColumns] != undefined) {
-                empty = false;
-                break;
-            }
-        }
-        if (empty) {
-            numOfEmptyColumns++;
-        }
-    }
-    for (var r = 0; r < map.length; r++) {
-        map[r].splice(0,numOfEmptyColumns);
-    }
-    trimmed[1] += numOfEmptyColumns;
-
-    // Trim empty right columns
-    empty = true;
-    numOfEmptyColumns = 0;
-    while (empty) {
-        for (var r = 0; r < map.length; r++) {
-            if (map[r][map[r].length - numOfEmptyColumns - 1] != "" && map[r][map[r].length - numOfEmptyColumns - 1] != undefined) {
-                empty = false;
-                break;
-            }
-        }
-        if (empty) {
-            numOfEmptyColumns++;
-        }
-    }
-    for (var r = 0; r < map.length; r++) {
-        map[r].splice(map[r].length - numOfEmptyColumns,numOfEmptyColumns);
-    }
-
-    return trimmed;
-}
-
-function blendMaps(originalMap, originalMapLocation, additionalMap, additionalMapLocation, forceBlend) {
-    console.log("Blending map location " + originalMapLocation + " with other location " + additionalMapLocation);
-    var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
-    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "[]"));
-
-    // Create a new map that is big enough to fit both maps
-    var newMapSize = [(originalMap.length + additionalMap.length)*2, (originalMap[0].length + additionalMap[0].length)*2];
-    console.log("New map of size: " + newMapSize);
-
-    // Calculate a new position that is in the center of our new map
-    var newMapLocation = [maps.length, Math.floor(newMapSize[0]/2), Math.floor(newMapSize[1]/2)];
-    console.log("New Map Location: " + newMapLocation);
-
-    // Iterate over all rows and columns of the new map, filling it in with details from both maps
-    var newMap = [];
-    var originalImageOffset = [newMapLocation[Y] - originalMapLocation[Y], newMapLocation[X] - originalMapLocation[X]];
-    var additionalImageOffset = [newMapLocation[Y] - additionalMapLocation[Y], newMapLocation[X] - additionalMapLocation[X]];
-    console.log("Original Image Offset: " + originalImageOffset);
-    console.log("Additional Image Offset: " + additionalImageOffset);
-    for (var r = 0; r < newMapSize[0]; r++) {
-        newMap.push([]);
-        for (var c = 0; c < newMapSize[1]; c++) {
-            var originalImage = "";
-            var additionalImage = "";
-
-            // Check if each map is 'in range' and grab its image
-            if (r >= originalImageOffset[0] && c >= originalImageOffset[1] && r < (originalImageOffset[0] + originalMap.length) && c < (originalImageOffset[1] + originalMap[0].length)) {
-                originalImage = originalMap[r - originalImageOffset[0]][c - originalImageOffset[1]];
-                //console.log("Found original image: " + originalImage);
-            }
-            if (r >= additionalImageOffset[0] && c >= additionalImageOffset[1] && r < (additionalImageOffset[0] + additionalMap.length) && c < (additionalImageOffset[1] + additionalMap[0].length)) {
-                additionalImage = additionalMap[r - additionalImageOffset[0]][c - additionalImageOffset[1]];
-                //console.log("Found additional image: " + additionalImage);
-            }
-
-            // If both images are not empty and different, we have misaligned maps and must abort
-            if (!forceBlend && originalImage != "" && additionalImage != "" && originalImage != undefined && additionalImage != undefined && originalImage != additionalImage) {
-                console.log("Found a contradiction between map images at new Image location " + [r,c] + ", aborting blend");
-                return false;
-            } else {
-                if (originalImage != "" && originalImage != undefined) {
-                    newMap[r].push(originalImage);
-                } else {
-                    newMap[r].push(additionalImage);
-                }
-                //console.log("Chose new image: " + newMap[r][c]);
-            }
-        }
-    }
-    console.log("Done initial blend, trimming excess....");
-
-    // Trim off any excess empty rows/columns
-    var amountTrimmed = trimMap(newMap);
-    console.log("Done trimming, configuring new locations....");
-
-    console.log("Original new map location before trimming: " + newMapLocation);
-    newMapLocation[Y] -= amountTrimmed[0];
-    newMapLocation[X] -= amountTrimmed[1];
-    console.log("New map location trimmed to: " + newMapLocation);
-
-    // Add the new map to our set of maps, keeping both old maps
-    if (maps.length > originalMapLocation[Z] && maps.length > additionalMapLocation[Z]) {
-        maps.push(newMap);
-
-        // Find old portals for both maps and add them as new portal pais to new map
-        for (var p = 0; p < portals.length; p++) {
-            var portal = portals[p];
-            for (var pair = 0; pair < portal.length; pair++) {
-                if (portal[pair][Z] == originalMapLocation[Z]) {
-                    portal[pair][Z] = maps.length-1;
-                    portal[pair][X] = portal[pair][X] + originalImageOffset[1] - amountTrimmed[1];
-                    portal[pair][Y] = portal[pair][Y] + originalImageOffset[0] - amountTrimmed[0];
-                } else if (portal[pair][Z] == additionalMapLocation[Z]) {
-                    portal[pair][Z] = maps.length-1;
-                    portal[pair][X] = portal[pair][X] + additionalImageOffset[1] - amountTrimmed[1];
-                    portal[pair][Y] = portal[pair][Y] + additionalImageOffset[0] - amountTrimmed[0];
-                }
-            }
-        }
-
-        // Save the maps and portals
-        GM_setValue(GM_MAPS, JSON.stringify(maps));
-        GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
-        GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(newMapLocation));
-        console.log("Done!");
-        return true;
-    }
-}
+var RECONFIGURE_POSITION_MESSAGE = "Please reconfigure your character's position by using the 'Reconfigure Position' button on the bottom right.  If you need more help, make sure to check out the 'Misaligned State' section of the Wiki!";
 
 
 // ================================================
@@ -273,12 +80,18 @@ var buttonDiv = $('<div></div>')
     "z-index":"10004"
 });
 
-// Display a button to control the redisplay toggling of map vs original
-$('<button>Toggle Map</button>').click(function(){
-    MAP_DISPLAY_ENABLED = !MAP_DISPLAY_ENABLED;
+function setMapExtenderEnable(isEnabled) {
+    MAP_DISPLAY_ENABLED = isEnabled;
     GM_setValue(GM_DISPLAY_MAP, JSON.stringify(MAP_DISPLAY_ENABLED));
     redisplayMap();
-}).appendTo($(buttonDiv));
+}
+
+function toggleMapExtender() {
+    setMapExtenderEnable(!MAP_DISPLAY_ENABLED);
+}
+
+// Display a button to control the redisplay toggling of map vs original
+$('<button>Toggle Map</button>').click(toggleMapExtender).appendTo($(buttonDiv));
 
 // Display a button to all users to reconfigure position
 $('<button>Reconfigure Position</button>').click(function(){
@@ -370,19 +183,8 @@ $('<button>Reconfigure Position</button>').click(function(){
                 switch (e.which) {
                     case 1: // Left-click
                         GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(clickedLocation));
+                        setMapExtenderEnable(true);
                         window.location.href = "http://www.neopets.com/games/neoquest/neoquest.phtml";
-                        break;
-                    case 2: // Middle Click
-                        if (blendMaps(maps[currentLocation[Z]], currentLocation, map, clickedLocation, true)) {
-                            $("#AutoQuesterOptions").remove();
-                            window.location.href = "http://www.neopets.com/games/neoquest/neoquest.phtml";
-                        }
-                        break;
-                    case 3: // Right Click
-                        if (blendMaps(maps[currentLocation[Z]], currentLocation, map, clickedLocation, false)) {
-                            $("#AutoQuesterOptions").remove();
-                            window.location.href = "http://www.neopets.com/games/neoquest/neoquest.phtml";
-                        }
                         break;
                 }
             }, function(){
@@ -517,18 +319,6 @@ function copyOriginalContent(mapDiv, mapNames, mapIndex) {
 // =====     Character Navigation Helpers     =====
 // ================================================
 
-// Create a new empty map and choose a default position within the map
-function createNewMapAndLocation(existingMaps, currentLocation, dimension) {
-    existingMaps.push(makeArray(dimension, dimension, ""));
-    GM_setValue(GM_MAPS, JSON.stringify(existingMaps));
-
-    // Place our current location in the middle of that map
-    currentLocation[X] = Math.floor(dimension/2);
-    currentLocation[Y] = Math.floor(dimension/2);
-    currentLocation[Z] = existingMaps.length - 1;
-    GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(currentLocation));
-}
-
 // Takes previous location and which direction we moved in and calculates where the new location is
 // Does not take in to account any environmental issues when moving across the map (ex blocker tiles)
 function getNewLocationAfterMove(oldLocation, moveDirection) {
@@ -622,73 +412,18 @@ function moveMainCharacter(oldLocation, maps, portals) {
         // If we didn't find a portal, create a new map 
         if (!foundNewLocation) {
             console.log("Unable to find portal, creating new map and location");
-            portals.push([ [oldLocation[0], oldLocation[1], oldLocation[2]] ]);
-            createNewMapAndLocation(maps, oldLocation, DEFAULT_MAP_DIMENSION);
-            portals[portals.length-1].push([oldLocation[0], oldLocation[1], oldLocation[2]]);
-            GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
+            alert("Whoops!  Looks like Map Extender couldn't find out where this portal lead to... " + RECONFIGURE_POSITION_MESSAGE);
+            setMapExtenderEnable(false);
         }
     }
 }
+
 
 // ================================================
-// =====       Map Manipulation Methods       =====
+// =====          Map Extender Logic          =====
 // ================================================
 
-function extendMapVerticallyUp(map, extendBy, mapLocation, portals) {
-    for (var j = 0; j < extendBy; j++) {
-        var newRow = [];
-        for (var k = 0; k < map[0].length; k++) {
-            newRow.push("");
-        }
-        map.unshift(newRow);
-    }
-
-    mapLocation[Y] += extendBy;
-    for (var p = 0; p < portals.length; p++) {
-        for (var pair = 0; pair < portals[p].length; pair++) {
-            if (portals[p][pair][Z] == mapLocation[Z]) {
-                portals[p][pair][Y] += extendBy;
-            }
-        }
-    }
-}
-
-function extendMapHorizontallyLeft(map, extendBy, mapLocation, portals) {
-    for (var r = 0; r < map.length; r++) {
-        for (var c = 0; c < extendBy; c++) {
-            map[r].unshift("");
-        }
-    }
-
-    mapLocation[X] += extendBy;
-    for (var p = 0; p < portals.length; p++) {
-        for (var pair = 0; pair < portals[p].length; pair++) {
-            if (portals[p][pair][Z] == mapLocation[Z]) {
-                portals[p][pair][X] += extendBy;
-            }
-        }
-    }
-}
-
-function extendMapVerticallyDown(map, extendBy) {
-    for (var j = 0; j < extendBy; j++) {
-        var newRow = [];
-        for (var k = 0; k < map[0].length; k++) {
-            newRow.push("");
-        }
-        map.push(newRow);
-    }
-}
-
-function extendMapHorizontallyRight(map, extendBy) {
-    for (var r = 0; r < map.length; r++) {
-        for (var c = 0; c < extendBy; c++) {
-            map[r].push("");
-        }
-    }
-}
-
-function updateMap(currentLocation, maps, portals) {
+function checkForContradictions(currentLocation, maps, portals) {
     var n = 0;
     var mapDim = [$('img[src^="http://images.neopets.com/nq/t"]').closest("tr").length, $('img[src^="http://images.neopets.com/nq/t"]').closest("tr").eq(0).find("td").length - 2];
     console.log("Map dim: " + mapDim);
@@ -698,29 +433,7 @@ function updateMap(currentLocation, maps, portals) {
     var bottomRightCoord = [currentLocation[0], currentLocation[1] + halfMapSize[0], currentLocation[2] + halfMapSize[1]];
     console.log("topLeftCoord: " + topLeftCoord);
     console.log("bottomRightCoord: " + bottomRightCoord);
-
-    // If our location is close to the top/left edges of our map, extend the map
-    if (topLeftCoord[Y] < 0) {
-        console.log("New rows needed");
-        extendMapVerticallyUp(maps[currentLocation[Z]], 0 - topLeftCoord[Y], currentLocation, portals);
-        topLeftCoord[Y] = 0;
-    } else if (bottomRightCoord[Y] >= maps[currentLocation[Z]].length) {
-        extendMapVerticallyDown(maps[currentLocation[Z]], bottomRightCoord[Y] - maps[currentLocation[Z]].length + 1);
-    }
-
-    if (topLeftCoord[X] < 0) {
-        console.log("New columns needed");
-        extendMapHorizontallyLeft(maps[currentLocation[Z]], 0 - topLeftCoord[X], currentLocation, portals);
-        topLeftCoord[X] = 0;
-    } else if (bottomRightCoord[X] >= maps[currentLocation[Z]][0].length) {
-        extendMapHorizontallyRight(maps[currentLocation[Z]], bottomRightCoord[X] - maps[currentLocation[Z]][0].length + 1);
-    }
-
-    // Save Changes
-    GM_setValue(GM_MAPS, JSON.stringify(maps));
-    GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
-    GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(currentLocation));
-
+    
     console.log("Top left coord from current position: " + topLeftCoord);
     $('img[src^="http://images.neopets.com/nq/t"]').each(function(){
         var currentRow = topLeftCoord[Y] + Math.floor(n / mapDim[1]);
@@ -740,14 +453,15 @@ function updateMap(currentLocation, maps, portals) {
         n++;
     });
 
+    // If a contradiction was found, we need to alert the user to reconfigure
     if (n < $('img[src^="http://images.neopets.com/nq/t"]').length - 1) {
         // Create a new blank map and move current location to the new map (let the player/user reconfigure position or blend maps)
-        console.log("Creaing new map, number of images found too small: " + n);
-        createNewMapAndLocation(maps, currentLocation, Math.max(mapDim[0], mapDim[1]));
-        updateMap(currentLocation, maps, portals);
-    } else {
-        GM_setValue(GM_MAPS, JSON.stringify(maps));
+        console.log("Detected map contradiction, alerting user to reconfigure");
+        alert("Whoops!  Looks like Map Extender got a little confused as to where you are. " + RECONFIGURE_POSITION_MESSAGE);
+        setMapExtenderEnable(false);
+        return true;
     }
+    return false;
 }
 
 function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
@@ -807,11 +521,6 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
     console.log("Done drawing map");
 }
 
-
-// ================================================
-// =====          Map Extender Logic          =====
-// ================================================
-
 // Detect which direction we moved (we may have been interupted by a battle/etc, so store it for later!)
 if (window.location.href.indexOf("action=move&movedir=") >= 0) {
     GM_setValue(GM_MOVE_DIR, window.location.href.slice(-1));
@@ -827,20 +536,19 @@ var location = JSON.parse(GM_getValue(GM_CURRENT_LOCATION_INDEX, "[]"));
 console.log("Portals:");
 console.log(portals);
 
-// If we have no data, create some initial data
-if (maps.length == 0 || location.length == 0) {
-    console.log("Detected empty map data, resetting stored data");
-
-    // Create an empty map
-    maps = [];
-    createNewMapAndLocation(maps, location, DEFAULT_MAP_DIMENSION);
+// If we have no data, turn off mapping
+if (maps.length == 0 || mapNames.length == 0 || portals.length == 0) {
+    console.log("Detected empty map data, alerting user and disabling map extender");
+    alert("Whoops!  Looks like Map Extender can't find any map data, make sure you've imported a MapExtender.storage.json file in order to use this script!");
+    setMapExtenderEnable(false);
+} else if (location.length == 0) {
+    console.log("Detected empty location data");
+    alert("Whoops!  Looks like Map Extender can't figure out where your character is.  " + RECONFIGURE_POSITION_MESSAGE);
+    setMapExtenderEnable(false);
 }
 
 // Using stored move direction/links, update our characters location
 moveMainCharacter(location, maps, portals);
-
-// Detect inner 5x5 images and update known images if necessary (overwrite old images)
-updateMap(location, maps, portals);
 
 // Determine if we draw our own map and redisplay the original content
 if ($('img[src^="http://images.neopets.com/nq/t"]').length == 0) {
@@ -850,14 +558,13 @@ if ($('img[src^="http://images.neopets.com/nq/t"]').length == 0) {
 
     // Also hide the buttons, they won't have any effect anyways
     $("#devButtons").css("display","none");
-
-    // Since we have no map to draw, abort further action
-    return;
 } else {
-    copyOriginalContent(mapDiv, mapNames, location[Z]);
-    drawMap(mapDiv, location, maps);
+    // Make sure we are aligned with the original NQ map
+    if (!checkForContradictions(location, maps, portals)) {
+        copyOriginalContent(mapDiv, mapNames, location[Z]);
+        drawMap(mapDiv, location, maps);
+    }
 }
-
 
 // DEV: Print out all our stored data
 console.log("Maps:");
