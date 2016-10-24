@@ -134,20 +134,90 @@ var buttonDiv = $('<div></div>')
     "text-align":"left"
 });
 
+function extendMapVerticallyUp(map, extendBy, mapLocation, portals) {
+    for (var j = 0; j < extendBy; j++) {
+        var newRow = [];
+        for (var k = 0; k < map[0].length; k++) {
+            newRow.push(selectedTile);
+        }
+        map.unshift(newRow);
+    }
+
+    mapLocation[Y] += extendBy;
+    for (var p = 0; p < portals.length; p++) {
+        for (var pair = 0; pair < portals[p].length; pair++) {
+            if (portals[p][pair][Z] == mapLocation[Z]) {
+                portals[p][pair][Y] += extendBy;
+            }
+        }
+    }
+}
+
+function extendMapHorizontallyLeft(map, extendBy, mapLocation, portals) {
+    for (var r = 0; r < map.length; r++) {
+        for (var c = 0; c < extendBy; c++) {
+            map[r].unshift(selectedTile);
+        }
+    }
+
+    mapLocation[X] += extendBy;
+    for (var p = 0; p < portals.length; p++) {
+        for (var pair = 0; pair < portals[p].length; pair++) {
+            if (portals[p][pair][Z] == mapLocation[Z]) {
+                portals[p][pair][X] += extendBy;
+            }
+        }
+    }
+}
+
+function extendMapVerticallyDown(map, extendBy) {
+    for (var j = 0; j < extendBy; j++) {
+        var newRow = [];
+        for (var k = 0; k < map[0].length; k++) {
+            newRow.push(selectedTile);
+        }
+        map.push(newRow);
+    }
+}
+
+function extendMapHorizontallyRight(map, extendBy) {
+    for (var r = 0; r < map.length; r++) {
+        for (var c = 0; c < extendBy; c++) {
+            map[r].push(selectedTile);
+        }
+    }
+}
+
 // Display a button to control the redisplay toggling of map vs original
-$('<button>Set All Empty Tiles</button>').click(function(){
+$('<button>Expand Map By 25</button>').click(function(){
+    var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
+    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "[]"));
+    var currentMap = $('#AutoQuesterMapModderSelector').find(":selected").val();
+    
+    extendMapVerticallyUp(maps[currentMap], 25, [currentMap,0,0], portals);
+    extendMapVerticallyDown(maps[currentMap], 25, [currentMap,0,0], portals);
+    extendMapHorizontallyRight(maps[currentMap], 25, [currentMap,0,0], portals);
+    extendMapHorizontallyLeft(maps[currentMap], 25, [currentMap,0,0], portals);
+    
+    GM_setValue(GM_MAPS, JSON.stringify(maps));
+    GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
+    drawMap(mapDiv, [currentMap,0,0], maps);
+}).appendTo($(buttonDiv));
+
+$('<br><button>Set All Empty Tiles</button>').click(function(){
     var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
     var currentMap = $('#AutoQuesterMapModderSelector').find(":selected").val();
     for (var y = 0; y < maps[currentMap].length; y++) {
         for (var x = 0; x < maps[currentMap][y].length; x++) {
-            if (maps[currentMap][y][x] == "" || maps[currentMap][y][x] == undefined) {
-                maps[currentMap][y][x] = TILE_OPTIONS[selectedTile];
+            if (maps[currentMap][y][x] == "" || maps[currentMap][y][x] == undefined || TILE_OPTIONS[maps[currentMap][y][x]] == undefined) {
+                maps[currentMap][y][x] = selectedTile;
             }
         }
     }
     GM_setValue(GM_MAPS, JSON.stringify(maps));
     drawMap(mapDiv, [currentMap,0,0], maps);
 }).appendTo($(buttonDiv));
+
 for (var key in TILE_OPTIONS) {
     console.log("adding: " + TILE_OPTIONS[i]);
     $(buttonDiv).append($('<br><input type=radio name=tile-selection value=' + key + '>' + key + '</input>').prop('checked', false).on('click', function(){
@@ -269,13 +339,9 @@ function drawMap(mapDiv, currentLocation) {
             } else {
                 var coord = [mapTopLeft[Z], mapTopLeft[Y] + row, mapTopLeft[X] + col];
                 var image = maps[coord[0]][coord[1]][coord[2]];
-                if (image.length > 0 && image.indexOf("http") < 0) {
-                    image = "http://images.neopets.com/nq/tp/" + image + ".gif";
-                    maps[coord[0]][coord[1]][coord[2]] = image;
-                    console.log(image);
-                }
+				console.log(image);
                 if (image != "" && image != undefined) {
-                    $(td).append("<img src='" + image + "' />");
+                    $(td).append("<img src='" + TILE_OPTIONS[image] + "' />");
                 } else {
                     $(td).append("<div style='border-style:none;width:" + tileWidth + "px;height:" + tileWidth + "px' />");
                 }
