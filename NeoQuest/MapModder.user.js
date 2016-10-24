@@ -13,8 +13,73 @@
 'use strict';
 
 var TILE_OPTIONS = {
-    "desert" : "http://images.neopets.com/nq/tp/desert.gif", 
-    "dirt" : "http://images.neopets.com/nq/tp/dirt.gif"
+    "castle" : "http://images.neopets.com/nq/tp/castle.gif",
+    "cave" : "http://images.neopets.com/nq/tp/cave.gif",
+    "cave_down" : "http://images.neopets.com/nq/tp/cave_down.gif",
+    "cave_ent" : "http://images.neopets.com/nq/tp/cave_ent.gif",
+    "cave_exit" : "http://images.neopets.com/nq/tp/cave_exit.gif",
+    "cave_up" : "http://images.neopets.com/nq/tp/cave_up.gif",
+    "city" : "http://images.neopets.com/nq/tp/city.gif",
+    "desert" : "http://images.neopets.com/nq/tp/desert.gif",
+    "dirt" : "http://images.neopets.com/nq/tp/dirt.gif",
+    "dungeon" : "http://images.neopets.com/nq/tp/dungeon.gif",
+    "dungeon_barrel" : "http://images.neopets.com/nq/tp/dungeon_barrel.gif",
+    "dungeon_bed" : "http://images.neopets.com/nq/tp/dungeon_bed.gif",
+    "dungeon_carpet" : "http://images.neopets.com/nq/tp/dungeon_carpet.gif",
+    "dungeon_chair" : "http://images.neopets.com/nq/tp/dungeon_chair.gif",
+    "dungeon_crate" : "http://images.neopets.com/nq/tp/dungeon_crate.gif",
+    "dungeon_door" : "http://images.neopets.com/nq/tp/dungeon_door.gif",
+    "dungeon_down" : "http://images.neopets.com/nq/tp/dungeon_down.gif",
+    "dungeon_pillar" : "http://images.neopets.com/nq/tp/dungeon_pillar.gif",
+    "dungeon_portal" : "http://images.neopets.com/nq/tp/dungeon_portal.gif",
+    "dungeon_table" : "http://images.neopets.com/nq/tp/dungeon_table.gif",
+    "dungeon_up" : "http://images.neopets.com/nq/tp/dungeon_up.gif",
+    "forest" : "http://images.neopets.com/nq/tp/forest.gif",
+    "grassland" : "http://images.neopets.com/nq/tp/grassland.gif",
+    "hills" : "http://images.neopets.com/nq/tp/hills.gif",
+    "jungle" : "http://images.neopets.com/nq/tp/jungle.gif",
+    "mountain" : "http://images.neopets.com/nq/tp/mountain.gif",
+    "npc_denethrir" : "http://images.neopets.com/nq/tp/npc_denethrir.gif",
+    "npc_erick" : "http://images.neopets.com/nq/tp/npc_erick.gif",
+    "npc_gatekeeper" : "http://images.neopets.com/nq/tp/npc_gatekeeper.gif",
+    "npc_irgo" : "http://images.neopets.com/nq/tp/npc_irgo.gif",
+    "npc_korabric" : "http://images.neopets.com/nq/tp/npc_korabric.gif",
+    "npc_margoreth" : "http://images.neopets.com/nq/tp/npc_margoreth.gif",
+    "npc_pomanna" : "http://images.neopets.com/nq/tp/npc_pomanna.gif",
+    "npc_rikti" : "http://images.neopets.com/nq/tp/npc_rikti.gif",
+    "npc_tylix" : "http://images.neopets.com/nq/tp/npc_tylix.gif",
+    "ruins" : "http://images.neopets.com/nq/tp/ruins.gif",
+    "snow" : "http://images.neopets.com/nq/tp/snow.gif",
+    "stone" : "http://images.neopets.com/nq/tp/stone.gif",
+    "swamp" : "http://images.neopets.com/nq/tp/swamp.gif",
+    "unique_archmagus" : "http://images.neopets.com/nq/tp/unique_archmagus.gif",
+    "unique_faleinn" : "http://images.neopets.com/nq/tp/unique_faleinn.gif",
+    "unique_gors" : "http://images.neopets.com/nq/tp/unique_gors.gif",
+    "unique_guardianfire" : "http://images.neopets.com/nq/tp/unique_guardianfire.gif",
+    "unique_guardianice" : "http://images.neopets.com/nq/tp/unique_guardianice.gif",
+    "unique_guardianlife" : "http://images.neopets.com/nq/tp/unique_guardianlife.gif",
+    "unique_guardianshock" : "http://images.neopets.com/nq/tp/unique_guardianshock.gif",
+    "unique_guardianspectral" : "http://images.neopets.com/nq/tp/unique_guardianspectral.gif",
+    "unique_jahbal" : "http://images.neopets.com/nq/tp/unique_jahbal.gif",
+    "unique_kreai" : "http://images.neopets.com/nq/tp/unique_kreai.gif",
+    "unique_rollay" : "http://images.neopets.com/nq/tp/unique_rollay.gif",
+    "unique_xantan" : "http://images.neopets.com/nq/tp/unique_xantan.gif",
+    "water_d" : "http://images.neopets.com/nq/tp/water_d.gif",
+    "water_iso" : "http://images.neopets.com/nq/tp/water_iso.gif",
+    "water_l" : "http://images.neopets.com/nq/tp/water_l.gif",
+    "water_ld" : "http://images.neopets.com/nq/tp/water_ld.gif",
+    "water_lr" : "http://images.neopets.com/nq/tp/water_lr.gif",
+    "water_lu" : "http://images.neopets.com/nq/tp/water_lu.gif",
+    "water_r" : "http://images.neopets.com/nq/tp/water_r.gif",
+    "water_rd" : "http://images.neopets.com/nq/tp/water_rd.gif",
+    "water_ru" : "http://images.neopets.com/nq/tp/water_ru.gif",
+    "water_t_d" : "http://images.neopets.com/nq/tp/water_t_d.gif",
+    "water_t_l" : "http://images.neopets.com/nq/tp/water_t_l.gif",
+    "water_t_r" : "http://images.neopets.com/nq/tp/water_t_r.gif",
+    "water_t_u" : "http://images.neopets.com/nq/tp/water_t_u.gif",
+    "water_u" : "http://images.neopets.com/nq/tp/water_u.gif",
+    "water_ud" : "http://images.neopets.com/nq/tp/water_ud.gif",
+    "water_x" : "http://images.neopets.com/nq/tp/water_x.gif"
 };
 
 var GM_MAPS = "AQ_extendedMap_maps"; // Our grand master 3D map grid (XY: coordinate within map, Z: which map)
@@ -62,19 +127,16 @@ var buttonDiv = $('<div></div>')
     "position":"fixed",
     "top":"5px",
     "right":"5px",
+    "height":"90%",
+    "overflow":"auto",
     "z-index":"10004",
-    "color":"white"
+    "color":"white",
+    "text-align":"left"
 });
 
 // Display a button to control the redisplay toggling of map vs original
-for (var key in TILE_OPTIONS) {
-    console.log("adding: " + TILE_OPTIONS[i]);
-    $(buttonDiv).append($('<input type=radio name=tile-selection value=' + key + '>' + key + '</input><br>').prop('checked', false).on('click', function(){
-        selectedTile = $(this).attr('value');
-        console.log(selectedTile);
-    }));
-}
 $('<button>Set All Empty Tiles</button>').click(function(){
+    var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
     var currentMap = $('#AutoQuesterMapModderSelector').find(":selected").val();
     for (var y = 0; y < maps[currentMap].length; y++) {
         for (var x = 0; x < maps[currentMap][y].length; x++) {
@@ -86,6 +148,13 @@ $('<button>Set All Empty Tiles</button>').click(function(){
     GM_setValue(GM_MAPS, JSON.stringify(maps));
     drawMap(mapDiv, [currentMap,0,0], maps);
 }).appendTo($(buttonDiv));
+for (var key in TILE_OPTIONS) {
+    console.log("adding: " + TILE_OPTIONS[i]);
+    $(buttonDiv).append($('<br><input type=radio name=tile-selection value=' + key + '>' + key + '</input>').prop('checked', false).on('click', function(){
+        selectedTile = $(this).attr('value');
+        console.log(selectedTile);
+    }));
+}
 
 // Create a blank div to display options on
 var selectedTile = "";
@@ -200,7 +269,6 @@ function drawMap(mapDiv, currentLocation) {
             } else {
                 var coord = [mapTopLeft[Z], mapTopLeft[Y] + row, mapTopLeft[X] + col];
                 var image = maps[coord[0]][coord[1]][coord[2]];
-                console.log(image);
                 if (image.length > 0 && image.indexOf("http") < 0) {
                     image = "http://images.neopets.com/nq/tp/" + image + ".gif";
                     maps[coord[0]][coord[1]][coord[2]] = image;
