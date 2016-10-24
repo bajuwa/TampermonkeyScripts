@@ -12,6 +12,11 @@
 /* jshint -W097 */
 'use strict';
 
+var TILE_OPTIONS = {
+    "desert" : "http://images.neopets.com/nq/tp/desert.gif", 
+    "dirt" : "http://images.neopets.com/nq/tp/dirt.gif"
+};
+
 var GM_MAPS = "AQ_extendedMap_maps"; // Our grand master 3D map grid (XY: coordinate within map, Z: which map)
 var GM_MAP_NAMES = "AQ_extendedMap_mapNames"; // A 1D array of map names; each name is at corresponding Z coordinate index
 var GM_PORTAL_PAIRS = "AQ_extendedMap_portalPairs"; // Stores XYZ map locations for pairs of connected portals (only stores A->Z, implies Z->A)
@@ -37,7 +42,8 @@ if (mapDiv.length == 0) {
         "z-index":"10000",
         "width":"100%",
         "height":"100%",
-        "background":"black"
+        "background":"black",
+        "overflow":"auto"
     }).appendTo($('body'));
 } 
 
@@ -61,16 +67,24 @@ var buttonDiv = $('<div></div>')
 });
 
 // Display a button to control the redisplay toggling of map vs original
-var TILE_OPTIONS = ["water", "dirt"];
-for (i = 0; i < TILE_OPTIONS.length; i++) {
+for (var key in TILE_OPTIONS) {
     console.log("adding: " + TILE_OPTIONS[i]);
-    $(buttonDiv).append($('<input type=radio name=tile-selection value=' + TILE_OPTIONS[i] + '>' + TILE_OPTIONS[i] + '</input><br>').prop('checked', false).on('click', function(){
+    $(buttonDiv).append($('<input type=radio name=tile-selection value=' + key + '>' + key + '</input><br>').prop('checked', false).on('click', function(){
         selectedTile = $(this).attr('value');
         console.log(selectedTile);
     }));
 }
 $('<button>Set All Empty Tiles</button>').click(function(){
-
+    var currentMap = $('#AutoQuesterMapModderSelector').find(":selected").val();
+    for (var y = 0; y < maps[currentMap].length; y++) {
+        for (var x = 0; x < maps[currentMap][y].length; x++) {
+            if (maps[currentMap][y][x] == "" || maps[currentMap][y][x] == undefined) {
+                maps[currentMap][y][x] = TILE_OPTIONS[selectedTile];
+            }
+        }
+    }
+    GM_setValue(GM_MAPS, JSON.stringify(maps));
+    drawMap(mapDiv, [currentMap,0,0], maps);
 }).appendTo($(buttonDiv));
 
 // Create a blank div to display options on
@@ -81,7 +95,6 @@ var optionsDiv = $('<div id="AutoQuesterOptions"></div>').attr("id", "AutoQueste
     "left":"0",
     "z-index":"10002",
     "width":"100%",
-    "height":"100%",
     "background":"black",
     "overflow":"auto"
 }).appendTo($('body'));
@@ -107,10 +120,8 @@ for (var i = 0; i < maps.length; i++) {
 // Every time they choose a map, display it to the user
 $(mapSelector).change(function(){
     if ($(this).val() >= 0) {
-        $("#AutoQuesterOptions").find("table").remove();
-        var mapTopLeft = [parseInt($(this).val()),0,0];
-        var map = maps[parseInt($(this).val())];
-        drawMap(optionsDiv, mapTopLeft, maps);
+        $(mapDiv).find("table").remove();
+        drawMap(mapDiv, [parseInt($(this).val()),0,0]);
     }
 });
 
@@ -154,16 +165,11 @@ jQuery.fn.center = function () {
 }
 
 // ================================================
-// =====     Content Manipulation Helpers     =====
-// ================================================
-
-// TODO
-
-// ================================================
 // =====          Map Extender Logic          =====
 // ================================================
 
-function drawMap(mapDiv, currentLocation, maps) {
+function drawMap(mapDiv, currentLocation) {
+    var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
     var map = maps[currentLocation[Z]];
 
     console.log("Drawing full map: " + currentLocation[Z]);
@@ -183,23 +189,33 @@ function drawMap(mapDiv, currentLocation, maps) {
         var tr = $("<tr></tr>").appendTo($(table));
         for (var col = 0; col < numOfColumns; col++) {
             var td = $("<td></td>").appendTo($(tr)).mousedown(function() {
-                maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = selectedTile;
+                maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
+                maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = TILE_OPTIONS[selectedTile];
+                $(this).empty();
+                $(this).append("<img src='" + TILE_OPTIONS[selectedTile] + "' />");
                 GM_setValue(GM_MAPS, JSON.stringify(maps));
-                drawMap(mapDiv, currentLocation, JSON.parse(GM_getValue(GM_MAPS, "[]")));
-            }); 
+            });
             if (mapTopLeft[Y] + row < 0 || mapTopLeft[X] + col < 0 || mapTopLeft[Y] + row >= maps[mapTopLeft[Z]].length || mapTopLeft[X] + col >= maps[mapTopLeft[Z]][mapTopLeft[Y] + row].length) {
                 $(td).append("<div style='border-style:none;width:" + tileWidth + "px;height:" + tileWidth + "px' />");
             } else {
                 var coord = [mapTopLeft[Z], mapTopLeft[Y] + row, mapTopLeft[X] + col];
                 var image = maps[coord[0]][coord[1]][coord[2]];
+                console.log(image);
+                if (image.length > 0 && image.indexOf("http") < 0) {
+                    image = "http://images.neopets.com/nq/tp/" + image + ".gif";
+                    maps[coord[0]][coord[1]][coord[2]] = image;
+                    console.log(image);
+                }
                 if (image != "" && image != undefined) {
-                    $(td).append("<img src='http://images.neopets.com/nq/tp/" + image + ".gif' />");
+                    $(td).append("<img src='" + image + "' />");
                 } else {
                     $(td).append("<div style='border-style:none;width:" + tileWidth + "px;height:" + tileWidth + "px' />");
                 }
             }
         }
     }
+    GM_setValue(GM_MAPS, JSON.stringify(maps));
+    maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
 
     // If drawing a full map, scroll to center
     $(mapDiv).scrollTop(tileWidth * numOfRows * 0.5);
@@ -222,7 +238,7 @@ if (maps.length == 0 || mapNames.length == 0 || portals.length == 0) {
 }
 
 // Determine if we draw our own map and redisplay the original content
-drawMap(mapDiv, [0,0,0], maps);
+drawMap(mapDiv, [0,0,0]);
 
 // DEV: Print out all our stored data
 console.log("Maps:");
