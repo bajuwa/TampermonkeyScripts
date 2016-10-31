@@ -329,7 +329,7 @@ function drawMap(mapDiv, currentLocation) {
         for (var col = 0; col < numOfColumns; col++) {
             var td = $("<td></td>").appendTo($(tr)).mousedown(function() {
                 maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
-                maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = TILE_OPTIONS[selectedTile];
+                maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = selectedTile;
                 $(this).empty();
                 $(this).append("<img src='" + TILE_OPTIONS[selectedTile] + "' />");
                 GM_setValue(GM_MAPS, JSON.stringify(maps));
@@ -339,7 +339,6 @@ function drawMap(mapDiv, currentLocation) {
             } else {
                 var coord = [mapTopLeft[Z], mapTopLeft[Y] + row, mapTopLeft[X] + col];
                 var image = maps[coord[0]][coord[1]][coord[2]];
-				console.log(image);
                 if (image != "" && image != undefined) {
                     $(td).append("<img src='" + TILE_OPTIONS[image] + "' />");
                 } else {
