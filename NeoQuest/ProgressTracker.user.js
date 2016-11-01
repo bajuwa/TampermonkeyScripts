@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoQuester - Progress Tracker
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  try to take over the world!
 // @author       bajuwa
 // @match        http://www.neopets.com/games/neoquest/neoquest.phtml*
@@ -18,6 +18,7 @@ var $ = window.jQuery;
 var GM_PROGRESS_DISPLAY_ENABLED = "AQ_progressTracker_progressDisplayEnabled";
 var GM_COMPLETION = "AQ_progressTracker_completion";
 var GM_DISPLAY = "AQ_progressTracker_display";
+var GM_CURRENT_INVENTORY = "AQ_progressTracker_currentInventory";
 
 var ELEMENT_ID_ALL = 'AutoQuester-ProgressTracker';
 var ELEMENT_ID_MAIN = 'AutoQuester-ProgressTracker-Main';
@@ -26,6 +27,7 @@ var CLASS_SUBTASK_TOGGLE = "AutoQuester-ProgressTracker-Subtasks";
 var CLASS_KEYWORD = "AutoQuester-ProgressTracker-Keyword";
 
 var PROGRESS_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_PROGRESS_DISPLAY_ENABLED, "false"));
+var CURRENT_INVENTORY = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
 
 var KEYWORD_ENTRY_TITLES = ["Name", "Description", "Source", "Location"];
 var KEYWORD_DICTIONARY = {
@@ -282,8 +284,14 @@ $("<style type='text/css'> ." + CLASS_KEYWORD + "{ color:gray; font-style:italic
 
 function createRowsForTodoList(ongoingList, todoList) {
     if ((typeof todoList === 'string' || todoList instanceof String) && todoList != "") {
+        console.log("Checking inventory for: " + todoList);
         // If we've hit a string, it means it's just a simple list item, so return it with a checkbox
-        $('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList).appendTo(ongoingList);
+        var li = $('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList).appendTo(ongoingList);
+        // If it's an item that we have, check it off
+        if (CURRENT_INVENTORY.hasOwnProperty(todoList)) {
+            console.log("Has own property: " + todoList);
+            $(li).val(true);
+        }
     } else if (todoList instanceof Array) {
         // If if is an array, it means it has a nested listing, so recursively call the row creation
         if (todoList.length > 0) {
@@ -322,7 +330,6 @@ function setupMainTable() {
     // Iterate over all keywords and link them to there known information
     for (var keyword in KEYWORD_DICTIONARY) {
         $("li:contains(" + keyword + ")").html(function(_, html) {
-            // TODO: Causes bug by adding 
             return html.replace(new RegExp("(" + keyword + ")"), '<span class="' + CLASS_KEYWORD + '">' + keyword + "</span>");
         });
     }
@@ -497,7 +504,8 @@ $(document).ready(function(){
 });
 
 
-
+// TODO: If on rewards page, parse what we won
+// TODO: If on a crafting page, remove items we lost and add items we created
 
 
 
