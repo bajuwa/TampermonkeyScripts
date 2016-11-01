@@ -309,7 +309,7 @@ function copyOriginalContent(mapDiv, mapNames, mapIndex) {
 
     // Allow users to show/hide the original content overview
     var OVERVIEW_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_DISPLAY_OVERVIEW, "false"));
-    contentContainer.prepend($("<div><p style='font-size:32px;margin:1px'><b>" + mapNames[mapIndex] + "</b></p></div>").css({
+    contentContainer.prepend($("<div id='overviewDisplay'><p style='font-size:32px;margin:1px'><b>" + mapNames[mapIndex] + "</b></p></div>").css({
         "background":"none",
         "color":"white",
         "width":"100%",
