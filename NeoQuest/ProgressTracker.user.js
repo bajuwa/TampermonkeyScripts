@@ -29,6 +29,311 @@ var CLASS_KEYWORD = "AutoQuester-ProgressTracker-Keyword";
 var PROGRESS_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_PROGRESS_DISPLAY_ENABLED, "false"));
 var CURRENT_INVENTORY = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
 
+$("<style type='text/css'> ." + CLASS_KEYWORD + "{ color:gray; font-style:italics;cursor:pointer;} </style>").appendTo("head");
+
+$(document).ready(function(){
+    // Create a div to hold all progress tracker information
+    $('<div>').attr('id',ELEMENT_ID_ALL).appendTo($('body')).css({
+        "position":"fixed",
+        "z-index":"20010",
+        "bottom":"0",
+        "left":"0",
+        "background":"black",
+        "color":"white",
+        "font-weight":"bold",
+        "text-align":"left",
+        "display":"none"
+    });
+
+    $('<div>').attr('id',ELEMENT_ID_MAIN).css({"float":"left","margin-bottom":"20px"}).appendTo($('#'+ELEMENT_ID_ALL));
+    $('<div>').attr('id',ELEMENT_ID_SECONDARY).css({"float":"left","margin-bottom":"20px","display":"none","width":"300px"}).appendTo($('#'+ELEMENT_ID_ALL));
+
+    // Create a main list menu that shows what tasks need to be done
+    updateInventory();
+    setupMainTable();
+    loadDisplayStatus();
+    loadCompletionStatus();
+    calculateCompletionRates();
+
+    // Create a secondary menu that shows details about list entries when clicked
+    setupSecondaryTable();
+
+    // Once everything is set up, set the div to display
+    $('#'+ELEMENT_ID_MAIN).css("display", (PROGRESS_DISPLAY_ENABLED ? "block" : "none") );
+    $('#'+ELEMENT_ID_ALL).css("display","block");
+
+    // Create a button on the bottom left hand screen that can be used to open/close the helper menu
+    $('<button>Toggle Progress</button>').click(function(){
+        PROGRESS_DISPLAY_ENABLED = !PROGRESS_DISPLAY_ENABLED;
+        GM_setValue(GM_PROGRESS_DISPLAY_ENABLED, JSON.stringify(PROGRESS_DISPLAY_ENABLED));
+        $('#'+ELEMENT_ID_MAIN).slideToggle();
+    }).css({
+        "position":"absolute",
+        "left":"0",
+        "bottom":"0",
+        "min-width":"125px"
+    }).appendTo($('#'+ELEMENT_ID_ALL));
+
+    // Create a button to restart progress (wipe all completion statuses)
+    $('<button>Restart</button>').click(function(){
+        GM_deleteValue(GM_COMPLETION);
+        GM_deleteValue(GM_CURRENT_INVENTORY);
+        loadCompletionStatus();
+        calculateCompletionRates();
+    }).css({
+        "position":"absolute",
+        "right":"0",
+        "bottom":"0"
+    }).appendTo($('#'+ELEMENT_ID_MAIN));
+
+});
+
+// ---------------------
+//  SAVE CONFIGURATIONS
+// ---------------------
+
+var hasImportedInventory = false;
+function updateInventory() {
+    if (hasImportedInventory) {
+        return;
+    }
+    if ($("img[src='http://images.neopets.com/nq/n/lupe_win.gif']").length > 0) {
+        // If on a rewards page, add new rewards
+        hasImportedInventory = true;
+        var currentInventory = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
+        $("img[src='http://images.neopets.com/nq/n/lupe_win.gif']").parent().find("b").each(function() {
+            updateInventoryForItem(currentInventory, $(this).text());
+        });
+        GM_setValue(GM_CURRENT_INVENTORY, JSON.stringify(currentInventory));
+    } else if ($('div:contains("gave you a")').length > 0) {
+        // If on a crafting results page, remove old items and add new
+        hasImportedInventory = true;
+        var currentInventory = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
+        $('div:contains("gave you a")').last().find("li").each(function() {
+            updateInventoryForItem(currentInventory, $(this).text(), -1);
+        });
+        var createdItem = toTitleCase($('div:contains("gave you a")').last().find("> b").last().text());
+        updateInventoryForItem(currentInventory, createdItem);
+        GM_setValue(GM_CURRENT_INVENTORY, JSON.stringify(currentInventory));
+    } else {
+        // else, clear our 'no-double import inventory' switch
+        hasImportedInventory = false;
+        if (window.location.href.indexOf("action=items") >= 0) {
+            // If on an inventory page, reset inventory and reload from current page info
+            var currentInventory = {};
+            $("b:contains('Your Items')").parent().find("table").first().find("tr").each(function(){
+                var increaseBy = $(this).find("td").eq(1).text().indexOf("/") >= 0 ? $(this).find("td").eq(1).text().substring(0,$(this).find("td").eq(1).text().indexOf("/")) : 1;
+                updateInventoryForItem(currentInventory, $(this).find("td").eq(0).text(), increaseBy);
+            });
+            GM_setValue(GM_CURRENT_INVENTORY, JSON.stringify(currentInventory));
+        }
+    }
+}
+
+function updateInventoryForItem(inventory, potentialItemName, increaseBy = 1) {
+    var itemName = toTitleCase(potentialItemName)
+    if (itemName.indexOf("experience") >= 0) {
+        return;
+    }
+    if (itemName.startsWith("A ")) {
+        itemName = itemName.substring(2);
+    }
+    if (itemName.startsWith("An ")) {
+        itemName = itemName.substring(3);
+    }
+    if (itemName.startsWith("The ")) {
+        itemName = itemName.substring(4);
+    }
+    if (KEYWORD_DICTIONARY.hasOwnProperty(itemName)) {
+        inventory[itemName] = inventory.hasOwnProperty(itemName) ? parseInt(inventory[itemName])+increaseBy : increaseBy;
+    }
+}
+
+function toTitleCase(str)
+{
+    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+}
+
+function saveCompletion() {
+    console.log("Saving completion status...");
+    var completion = [];
+    $('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").each(function() {
+        completion.push($(this).prop('checked'));
+    });
+    GM_setValue(GM_COMPLETION, JSON.stringify(completion));
+}
+
+function saveDisplay() {
+    console.log("Saving display status...");
+    var display = [];
+    $('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").each(function() {
+        display.push($(this).css("display"));
+    });
+    GM_setValue(GM_DISPLAY, JSON.stringify(display));
+}
+
+// ---------------------
+//  SETUP MAIN DISPLAYS
+// ---------------------
+
+function createRowsForTodoList(ongoingList, todoList) {
+    if ((typeof todoList === 'string' || todoList instanceof String) && todoList != "") {
+        // If we've hit a string, it means it's just a simple list item, so return it with a checkbox
+        var li = $('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList + '</input>').appendTo(ongoingList);
+    } else if (todoList instanceof Array) {
+        // If if is an array, it means it has a nested listing, so recursively call the row creation
+        if (todoList.length > 0) {
+            if (todoList[0] != "") {
+                if (todoList[1] == 0) {
+                    ongoingList.append($('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList[0] + ' <span>[ See Recipe ]</span>'));
+                } else {
+                    ongoingList.append($('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList[0] + ' <span>[ ?/' + todoList[1] + ' ]</span>'));
+                }
+            }
+            var newUl = $('<ul>').appendTo(ongoingList);
+            for (var i = 0; i < todoList[2].length; i++) {
+                createRowsForTodoList(newUl, todoList[2][i]);
+            }
+        }
+    }
+}
+
+function setupMainTable() {
+    // Create the main structure given our preconfigured todo lists
+    createRowsForTodoList($('#'+ELEMENT_ID_MAIN), TODO_LIST_MAIN);
+
+    // Iterate over each subtask checklist and add the click ability to open/close subtasks
+    $("span:contains([)").attr("class",CLASS_SUBTASK_TOGGLE).css({
+        "font-weight":"bold",
+        "color":"orange",
+        "cursor":"pointer"
+    });
+
+    // Since our spans are dynamically created, the click event has to be handled by the document via class name
+    $(document).on('click', "."+CLASS_SUBTASK_TOGGLE, function(){
+        $(this).parent("li").next("ul").slideToggle();
+        setTimeout(function(){saveDisplay();}, 1000);
+    });
+
+    // Iterate over all keywords and link them to there known information
+    for (var keyword in KEYWORD_DICTIONARY) {
+        $("li:contains(" + keyword + ")").html(function(_, html) {
+            return html.replace(new RegExp("(" + keyword + ")"), '<span class="' + CLASS_KEYWORD + '">' + keyword + "</span>");
+        });
+    }
+
+    $(document).on('click', "."+CLASS_KEYWORD, function() {
+        loadKeywordData($(this).text().trim());
+    });
+}
+
+function setupSecondaryTable() {
+    $('#'+ELEMENT_ID_SECONDARY).append($("<span id='clickToClose'>").css({"float":"right","margin":"5px","cursor":"pointer"}).text("X"));
+    $(document).on('click', '#clickToClose', function(){ $('#'+ELEMENT_ID_SECONDARY).hide(); });
+    for (var i = 0; i < KEYWORD_ENTRY_TITLES.length; i++) {
+        $('#'+ELEMENT_ID_SECONDARY).append($("<table>").append($("<th>").text(KEYWORD_ENTRY_TITLES[i])).append($("<tr>").append($("<td>").text("test"))));
+    }
+    $('#'+ELEMENT_ID_SECONDARY).find("table").css({
+        "text-align":"center",
+        "padding":"5px 10px",
+        "width":"100%"
+    });
+    $('#'+ELEMENT_ID_SECONDARY).find("th").css({
+        "color":"gray",
+        "text-decoration":"underline"
+    });
+}
+
+// ---------------------
+//  CHECKLIST MODIFYING
+// ---------------------
+
+// Replace the initial '?' with the counts of their complete subtasks
+function calculateCompletionRates() {
+    console.log("Recalculating completion rates...");
+
+    // For each list element with a set of subtasks, see how close we are to completing required subtasks
+    $($('#'+ELEMENT_ID_MAIN).find("li:contains(/)").not("ul").get().reverse()).each(function() {
+        // Find all the li elements that are direct children and count number that are checked as complete
+        var numOfCompletedSubtasks = $(this).next("ul").children('li').find('input[type=checkbox]:checked').length;
+        var slashIndex = $(this).html().indexOf("/", $(this).html().indexOf("["))-1;
+
+        if (slashIndex < 0) {
+            return;
+        }
+
+        $(this).html(function() {
+            return $(this).html().substr(0, slashIndex) + numOfCompletedSubtasks + $(this).html().substr(slashIndex+1);
+        }).prop('checked', true);
+
+        // If enough subtasks have been completed, mark the parent as complete
+        var minRequiredSubtasks = $(this).html().substring(slashIndex + 2, slashIndex + 3);
+        if (numOfCompletedSubtasks >= parseInt(minRequiredSubtasks)) {
+            console.log("Subtasks complete, updating parent!");
+            $(this).next("ul:visible").slideToggle();
+            $(this).find("input[type=checkbox]").eq(0).prop('checked', true);
+        }
+    });
+
+    saveCompletion();
+    saveDisplay();
+}
+
+// Iterate over all checkboxes and apply their values from storage
+function loadCompletionStatus() {
+    console.log("Displaying completion status...");
+    var defaultCompletion = new Array($('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").length);
+    for (var i = 0; i < defaultCompletion.length; i++) { defaultCompletion[i] = false; }
+    var completion = JSON.parse(GM_getValue(GM_COMPLETION, JSON.stringify(defaultCompletion)));
+    var currentInventory = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
+
+    var n = 0;
+    $('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").each(function() {
+        // If it's an item that we have, check it off
+        var keyword = $(this).parent().find("span[class='AutoQuester-ProgressTracker-Keyword']").text();
+        if (currentInventory.hasOwnProperty(keyword)) {
+            completion[n] = parseInt(currentInventory[keyword]) > 0
+        }
+        $(this).prop('checked', completion[n++]);
+        $(this).on('click', function() {
+            calculateCompletionRates();
+        });
+    });
+    
+    saveCompletion();
+}
+
+// Iterate over all ul's and apply their display values from storage
+function loadDisplayStatus() {
+    console.log("Loading display status...");
+    var defaultDisplay = new Array($('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").length);
+    for (var i = 0; i < defaultDisplay.length; i++) { defaultDisplay[i] = "none"; }
+    var display = JSON.parse(GM_getValue(GM_DISPLAY, JSON.stringify(defaultDisplay)));
+    
+    var n = 0;
+    $('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").each(function() {
+        $(this).css('display', display[n++]);
+    });
+}
+
+function loadKeywordData(keyword) {
+    console.log("Loading data for: " + keyword);
+    var keywordInfoIndex = -1;
+    $('#'+ELEMENT_ID_SECONDARY).find("table").each(function(){
+        if (keywordInfoIndex < 0) {
+            $(this).find("td").text(keyword);
+        } else {
+            $(this).find("td").text(KEYWORD_DICTIONARY[keyword][keywordInfoIndex]);
+        }
+        keywordInfoIndex++;
+    });
+    $('#'+ELEMENT_ID_SECONDARY).show();
+}
+
+// ---------------------
+//   HARDCODED VALUES
+// ---------------------
+
 var KEYWORD_ENTRY_TITLES = ["Name", "Description", "Source", "Location"];
 var KEYWORD_DICTIONARY = {
     // Healing Potions
@@ -279,239 +584,6 @@ var TODO_LIST_MAIN = ["", 0, [
     ["Techo Caves", TODO_LIST_TECHO_CAVES.length, TODO_LIST_TECHO_CAVES],
     ["Two Rings", TODO_LIST_TWO_RINGS.length, TODO_LIST_TWO_RINGS]
 ]];
-
-$("<style type='text/css'> ." + CLASS_KEYWORD + "{ color:gray; font-style:italics;cursor:pointer;} </style>").appendTo("head");
-
-function createRowsForTodoList(ongoingList, todoList) {
-    if ((typeof todoList === 'string' || todoList instanceof String) && todoList != "") {
-        console.log("Checking inventory for: " + todoList);
-        // If we've hit a string, it means it's just a simple list item, so return it with a checkbox
-        var li = $('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList).appendTo(ongoingList);
-        // If it's an item that we have, check it off
-        if (CURRENT_INVENTORY.hasOwnProperty(todoList)) {
-            console.log("Has own property: " + todoList);
-            $(li).val(true);
-        }
-    } else if (todoList instanceof Array) {
-        // If if is an array, it means it has a nested listing, so recursively call the row creation
-        if (todoList.length > 0) {
-            if (todoList[0] != "") {
-                if (todoList[1] == 0) {
-                    ongoingList.append($('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList[0] + ' <span>[ See Recipe ]</span>'));
-                } else {
-                    ongoingList.append($('<li>').css("list-style-type","none").html('<input type="checkbox"> ' + todoList[0] + ' <span>[ ?/' + todoList[1] + ' ]</span>'));
-                }
-            }
-            var newUl = $('<ul>').appendTo(ongoingList);
-            for (var i = 0; i < todoList[2].length; i++) {
-                createRowsForTodoList(newUl, todoList[2][i]);
-            }
-        }
-    }
-}
-
-function setupMainTable() {
-    // Create the main structure given our preconfigured todo lists
-    createRowsForTodoList($('#'+ELEMENT_ID_MAIN), TODO_LIST_MAIN);
-
-    // Iterate over each subtask checklist and add the click ability to open/close subtasks
-    $("span:contains([)").attr("class",CLASS_SUBTASK_TOGGLE).css({
-        "font-weight":"bold",
-        "color":"orange",
-        "cursor":"pointer"
-    });
-
-    // Since our spans are dynamically created, the click event has to be handled by the document via class name
-    $(document).on('click', "."+CLASS_SUBTASK_TOGGLE, function(){
-        $(this).parent("li").next("ul").slideToggle();
-        setTimeout(function(){saveDisplay();}, 1000);
-    });
-
-    // Iterate over all keywords and link them to there known information
-    for (var keyword in KEYWORD_DICTIONARY) {
-        $("li:contains(" + keyword + ")").html(function(_, html) {
-            return html.replace(new RegExp("(" + keyword + ")"), '<span class="' + CLASS_KEYWORD + '">' + keyword + "</span>");
-        });
-    }
-
-    $(document).on('click', "."+CLASS_KEYWORD, function() {
-        loadKeywordData($(this).text().trim());
-    });
-}
-
-function saveCompletion() {
-    console.log("Saving completion status...");
-    var completion = [];
-    $('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").each(function() {
-        completion.push($(this).prop('checked'));
-    });
-    GM_setValue(GM_COMPLETION, JSON.stringify(completion));
-}
-
-function saveDisplay() {
-    console.log("Saving display status...");
-    var display = [];
-    $('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").each(function() {
-        display.push($(this).css("display"));
-    });
-    GM_setValue(GM_DISPLAY, JSON.stringify(display));
-}
-
-// Replace the initial '?' with the counts of their complete subtasks
-function calculateCompletionRates() {
-    console.log("Recalculating completion rates...");
-
-    // For each list element with a set of subtasks, see how close we are to completing required subtasks
-    $($('#'+ELEMENT_ID_MAIN).find("li:contains(/)").not("ul").get().reverse()).each(function() {
-        // Find all the li elements that are direct children and count number that are checked as complete
-        var numOfCompletedSubtasks = $(this).next("ul").children('li').find('input[type=checkbox]:checked').length;
-        var slashIndex = $(this).html().indexOf("/", $(this).html().indexOf("["))-1;
-
-        if (slashIndex < 0) {
-            return;
-        }
-
-        $(this).html(function() {
-            return $(this).html().substr(0, slashIndex) + numOfCompletedSubtasks + $(this).html().substr(slashIndex+1);
-        }).prop('checked', true);
-
-        // If enough subtasks have been completed, mark the parent as complete
-        var minRequiredSubtasks = $(this).html().substring(slashIndex + 2, slashIndex + 3);
-        if (numOfCompletedSubtasks >= parseInt(minRequiredSubtasks)) {
-            console.log("Subtasks complete, updating parent!");
-            $(this).next("ul:visible").slideToggle();
-            $(this).find("input[type=checkbox]").eq(0).prop('checked', true);
-        }
-    });
-
-    saveCompletion();
-    saveDisplay();
-}
-
-// Iterate over all checkboxes and apply their values from storage
-function loadCompletionStatus() {
-    console.log("Displaying completion status...");
-    var defaultCompletion = new Array($('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").length);
-    for (var i = 0; i < defaultCompletion.length; i++) { defaultCompletion[i] = false; }
-    var completion = JSON.parse(GM_getValue(GM_COMPLETION, JSON.stringify(defaultCompletion)));
-
-    var n = 0;
-    $('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").each(function() {
-        $(this).prop('checked', completion[n++]);
-        $(this).on('click', function() {
-            calculateCompletionRates();
-        });
-    });
-}
-
-// Iterate over all ul's and apply their display values from storage
-function loadDisplayStatus() {
-    console.log("Loading display status...");
-    var defaultDisplay = new Array($('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").length);
-    for (var i = 0; i < defaultDisplay.length; i++) { defaultDisplay[i] = "none"; }
-    var display = JSON.parse(GM_getValue(GM_DISPLAY, JSON.stringify(defaultDisplay)));
-    
-    var n = 0;
-    $('#'+ELEMENT_ID_MAIN).find("span:contains([)").parent("li").next("ul").each(function() {
-        $(this).css('display', display[n++]);
-    });
-}
-
-function setupSecondaryTable() {
-    $('#'+ELEMENT_ID_SECONDARY).append($("<span id='clickToClose'>").css({"float":"right","margin":"5px","cursor":"pointer"}).text("X"));
-    $(document).on('click', '#clickToClose', function(){ $('#'+ELEMENT_ID_SECONDARY).hide(); });
-    for (var i = 0; i < KEYWORD_ENTRY_TITLES.length; i++) {
-        $('#'+ELEMENT_ID_SECONDARY).append($("<table>").append($("<th>").text(KEYWORD_ENTRY_TITLES[i])).append($("<tr>").append($("<td>").text("test"))));
-    }
-    $('#'+ELEMENT_ID_SECONDARY).find("table").css({
-        "text-align":"center",
-        "padding":"5px 10px",
-        "width":"100%"
-    });
-    $('#'+ELEMENT_ID_SECONDARY).find("th").css({
-        "color":"gray",
-        "text-decoration":"underline"
-    });
-}
-
-function loadKeywordData(keyword) {
-    console.log("Loading data for: " + keyword);
-    var keywordInfoIndex = -1;
-    $('#'+ELEMENT_ID_SECONDARY).find("table").each(function(){
-        if (keywordInfoIndex < 0) {
-            $(this).find("td").text(keyword);
-        } else {
-            $(this).find("td").text(KEYWORD_DICTIONARY[keyword][keywordInfoIndex]);
-        }
-        keywordInfoIndex++;
-    });
-    $('#'+ELEMENT_ID_SECONDARY).show();
-}
-
-$(document).ready(function(){
-    // Create a div to hold all progress tracker information
-    $('<div>').attr('id',ELEMENT_ID_ALL).appendTo($('body')).css({
-        "position":"fixed",
-        "z-index":"20010",
-        "bottom":"0",
-        "left":"0",
-        "background":"black",
-        "color":"white",
-        "font-weight":"bold",
-        "text-align":"left",
-        "display":"none"
-    });
-
-    $('<div>').attr('id',ELEMENT_ID_MAIN).css({"float":"left","margin-bottom":"20px"}).appendTo($('#'+ELEMENT_ID_ALL));
-    $('<div>').attr('id',ELEMENT_ID_SECONDARY).css({"float":"left","margin-bottom":"20px","display":"none","width":"300px"}).appendTo($('#'+ELEMENT_ID_ALL));
-
-    // Create a main list menu that shows what tasks need to be done
-    setupMainTable();
-    loadDisplayStatus();
-    loadCompletionStatus();
-    calculateCompletionRates();
-
-    // Create a secondary menu that shows details about list entries when clicked
-    setupSecondaryTable();
-
-    // Once everything is set up, set the div to display
-    $('#'+ELEMENT_ID_MAIN).css("display", (PROGRESS_DISPLAY_ENABLED ? "block" : "none") );
-    $('#'+ELEMENT_ID_ALL).css("display","block");
-
-    // Create a button on the bottom left hand screen that can be used to open/close the helper menu
-    $('<button>Toggle Progress</button>').click(function(){
-        PROGRESS_DISPLAY_ENABLED = !PROGRESS_DISPLAY_ENABLED;
-        GM_setValue(GM_PROGRESS_DISPLAY_ENABLED, JSON.stringify(PROGRESS_DISPLAY_ENABLED));
-        $('#'+ELEMENT_ID_MAIN).slideToggle();
-    }).css({
-        "position":"absolute",
-        "left":"0",
-        "bottom":"0",
-        "min-width":"125px"
-    }).appendTo($('#'+ELEMENT_ID_ALL));
-
-    // Create a button to restart progress (wipe all completion statuses)
-    $('<button>Restart</button>').click(function(){
-        GM_deleteValue(GM_COMPLETION);
-        loadCompletionStatus();
-        calculateCompletionRates();
-    }).css({
-        "position":"absolute",
-        "right":"0",
-        "bottom":"0"
-    }).appendTo($('#'+ELEMENT_ID_MAIN));
-
-});
-
-
-// TODO: If on rewards page, parse what we won
-// TODO: If on a crafting page, remove items we lost and add items we created
-
-
-
-
-
-
 
 
 
