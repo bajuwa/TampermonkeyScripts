@@ -27,7 +27,6 @@ var CLASS_SUBTASK_TOGGLE = "AutoQuester-ProgressTracker-Subtasks";
 var CLASS_KEYWORD = "AutoQuester-ProgressTracker-Keyword";
 
 var PROGRESS_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_PROGRESS_DISPLAY_ENABLED, "false"));
-var CURRENT_INVENTORY = JSON.parse(GM_getValue(GM_CURRENT_INVENTORY, "{}"));
 
 $("<style type='text/css'> ." + CLASS_KEYWORD + "{ color:gray; font-style:italics;cursor:pointer;} </style>").appendTo("head");
 
@@ -131,6 +130,13 @@ function updateInventory() {
 }
 
 function updateInventoryForItem(inventory, potentialItemName, increaseBy = 1) {
+    var itemName = formatItemName(potentialItemName);
+    if (KEYWORD_DICTIONARY.hasOwnProperty(itemName)) {
+        inventory[itemName] = inventory.hasOwnProperty(itemName) ? parseInt(inventory[itemName])+increaseBy : increaseBy;
+    }
+}
+
+function formatItemName(potentialItemName) {
     var itemName = toTitleCase(potentialItemName)
     if (itemName.indexOf("experience") >= 0) {
         return;
@@ -144,14 +150,26 @@ function updateInventoryForItem(inventory, potentialItemName, increaseBy = 1) {
     if (itemName.startsWith("The ")) {
         itemName = itemName.substring(4);
     }
-    if (KEYWORD_DICTIONARY.hasOwnProperty(itemName)) {
-        inventory[itemName] = inventory.hasOwnProperty(itemName) ? parseInt(inventory[itemName])+increaseBy : increaseBy;
-    }
+    return itemName;
 }
 
 function toTitleCase(str)
 {
-    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+    var newStr = ""
+    var initialSplit = str.split(" ");
+    for (var s in initialSplit) {
+        var tempStrs = initialSplit[s].split("-");
+        for (var i in tempStrs) {
+            newStr += tempStrs[i].toLowerCase().capitalize() + "-";
+        }
+        newStr = newStr.substring(0, newStr.length - 1) + " ";
+    }
+    console.log(newStr)
+    return newStr.trim();
+}
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
 function saveCompletion() {
@@ -290,9 +308,13 @@ function loadCompletionStatus() {
     var n = 0;
     $('#'+ELEMENT_ID_MAIN).find("input[type=checkbox]").each(function() {
         // If it's an item that we have, check it off
-        var keyword = $(this).parent().find("span[class='AutoQuester-ProgressTracker-Keyword']").text();
-        if (currentInventory.hasOwnProperty(keyword)) {
-            completion[n] = parseInt(currentInventory[keyword]) > 0
+        var keyword = $(this).parent().text().trim();
+        if (keyword.indexOf("[") >= 0) {
+            keyword = keyword.substring(0,keyword.indexOf("["));
+        }
+        keyword = formatItemName(keyword);
+        if (KEYWORD_DICTIONARY.hasOwnProperty(keyword)) {
+            completion[n] = currentInventory.hasOwnProperty(keyword) && parseInt(currentInventory[keyword]) > 0;
         }
         $(this).prop('checked', completion[n++]);
         $(this).on('click', function() {
@@ -396,7 +418,7 @@ var KEYWORD_DICTIONARY = {
     "Silver-Plated Key": ["Opens door to North-West room in Temple of Roo Level 2", "Ghastly priest", "South-West Room in Temple of Roo Level 2"],
     "Gold-Plated Key": ["Opens door to East room in Temple of Roo Level 2", "Ghastly master", "North-West Room in Temple of Roo Level 2"],
     "Platinum-Plated Key": ["Opens door to Center room in Temple of Roo Level 2", "Ghastly archon", "East Room in Temple of Roo Level 2"],
-    "Crystalline-Plated Key": ["Opens door to South-East room in Temple of Roo Level 2 (leads to the Archmagus of Roo)", "Ghastly templar", "Center Room in Temple of Roo Level 2"],
+    "Crystalline Key": ["Opens door to South-East room in Temple of Roo Level 2 (leads to the Archmagus of Roo)", "Ghastly templar", "Center Room in Temple of Roo Level 2"],
     
     "Ruby": ["Use to make the Blazing Jewel", "'Ghastly' Monsters", "Temple of Roo Level 2"],
     "Sapphire": ["Use to make the Chilling Jewel", "'Ghastly' Monsters", "Temple of Roo Level 2"],
@@ -554,7 +576,7 @@ var TODO_LIST_SWAMP_EDGE_CITY = [
 ];
 
 var TODO_LIST_TEMPLE_OF_ROO = [
-    ["Find Keys to Open Doors 1-6", 6, ["Find the Copper-Plated Key", "Find the Bronze-Plated Key", "Find the Silver-Plated Key", "Find the Gold-Plated Key", "Find the Platinum-Plated Key", "Find the Crystalline-Plated Key"]],
+    ["Find Keys to Open Doors 1-6", 6, ["Copper-Plated Key", "Bronze-Plated Key", "Silver-Plated Key", "Gold-Plated Key", "Platinum-Plated Key", "Crystalline Key"]],
     "Defeat the Archmagus of Roo",
     "Trade the Clouded Gem for the Coruscating Gem",
     ["Talk to Leirobas in Swamp Edge City", 0, ["Piece Of Living Crystal"]],
@@ -584,6 +606,10 @@ var TODO_LIST_MAIN = ["", 0, [
     ["Techo Caves", TODO_LIST_TECHO_CAVES.length, TODO_LIST_TECHO_CAVES],
     ["Two Rings", TODO_LIST_TWO_RINGS.length, TODO_LIST_TWO_RINGS]
 ]];
+
+
+
+
 
 
 
