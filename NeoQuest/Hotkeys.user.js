@@ -106,6 +106,18 @@ document.onkeypress = function (e) {
         }
 
     } else if (window.location.href.indexOf("action=talk") >= 0) {
+        // Spacebar
+        switch (charCode) {
+            case 32:
+                e.preventDefault();
+                // Default 'next' action
+                $('input[value="Click here to begin the fight!"]').click();
+                $('input[value="Click here to return to the map"]').click();
+                $('input[value="Click here to return to Neopia City"]').click();
+
+                break;
+        }
+
         // NPC Chat Hotkeys
         window.location.href = $('a[href^="neoquest.phtml?action=talk"').eq(parseInt(charCode)-49).attr("href");
     } else if ($("img[src^='http://images.neopets.com/nq/n/lupe_']").length > 0 || $("img[src^='http://images.neopets.com/nq/m/']").length > 0) {
