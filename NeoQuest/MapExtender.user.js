@@ -109,6 +109,8 @@ var RECONFIGURE_POSITION_MESSAGE = "Please reconfigure your character's position
 // =====            CSS/JS Display            =====
 // ================================================
 
+$('body').css("hidden",true);
+
 // Allow user to control whether they are viewing the original NQ screen or our Extended Map screen
 var MAP_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_DISPLAY_MAP, "false"));
 var mapDiv = $('#AutoQuesterMap');
@@ -199,7 +201,7 @@ $('<button>Reconfigure Position</button>').click(function(){
     // Have user choose a map
     var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
     var mapNames = JSON.parse(GM_getValue(GM_MAP_NAMES, "[]"));
-    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "[]"));
+    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
     var currentLocation = JSON.parse(GM_getValue(GM_CURRENT_LOCATION_INDEX, "[]"));
     var mapSelector = $("<select></select>").appendTo($("#AutoQuesterMapSelector"));
     mapSelector.append($("<option>").attr('value',-1).text("--"));
@@ -427,26 +429,13 @@ function moveMainCharacter(oldLocation, maps, portals) {
         console.log("Detected portal move via link: " + moveLink);
 
         // Try to find an existing portal link with our old location
-        var foundNewLocation = false;
-        for (var i = 0; i < portals.length; i++) {
-            var portal = portals[i];
-            if (arraysEqual(portal[0], oldLocation)) {
-                console.log("Following portal from " + portal[0] + " to " + portal[1]);
-                oldLocation[X] = portal[1][X];
-                oldLocation[Y] = portal[1][Y];
-                oldLocation[Z] = portal[1][Z];
-                foundNewLocation = true;
-            } else if (arraysEqual(portal[1], oldLocation)) {
-                console.log("Following portal from " + portal[1] + " to " + portal[0]);
-                oldLocation[X] = portal[0][X];
-                oldLocation[Y] = portal[0][Y];
-                oldLocation[Z] = portal[0][Z];
-                foundNewLocation = true;
-            }
-        }
-
-        // If we didn't find a portal, create a new map 
-        if (!foundNewLocation) {
+        var portalHash = oldLocation[Z] + "-" + oldLocation[Y] + "-" + oldLocation[X]
+        if (portals.hasOwnProperty(portalHash)) {
+            oldLocation[X] = portals[portalHash][X];
+            oldLocation[Y] = portals[portalHash][Y];
+            oldLocation[Z] = portals[portalHash][Z];
+            GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(oldLocation));
+        } else {
             console.log("Unable to find portal, creating new map and location");
             alert("Whoops!  Looks like Map Extender couldn't find out where this portal lead to... " + RECONFIGURE_POSITION_MESSAGE);
             setMapExtenderEnable(false);
@@ -537,7 +526,7 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
             } else {
                 var coord = [mapTopLeft[Z], mapTopLeft[Y] + row, mapTopLeft[X] + col];
                 var image = maps[coord[0]][coord[1]][coord[2]];
-                if (arraysEqual(currentLocation, coord) && !drawFullMap) {
+                if (currentLocation[Z] == coord[Z] && currentLocation[Y] == coord[Y] && currentLocation[X] == coord[X] && !drawFullMap) {
                     $(td).append("<img src='" + lupeImage.attr('src') + "' />");
                 } else if (image != "" && image != undefined) {
                     $(td).append("<img src='" + TILE_OPTIONS[image] + "'/>");
@@ -550,8 +539,8 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
 
     // If drawing a full map, scroll to center
     if (drawFullMap) {
-        $(mapDiv).scrollTop(tileWidth * numOfRows * 0.5);
-        $(mapDiv).scrollLeft(tileWidth * numOfColumns * 0.5);
+        $(mapDiv).scrollTop(tileWidth * numOfRows * 0.4);
+        $(mapDiv).scrollLeft(tileWidth * numOfColumns * 0.4);
     }
 
     console.log("Done drawing map");
@@ -567,10 +556,8 @@ if (window.location.href.indexOf("action=move&movedir=") >= 0) {
 // Load our map information
 var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
 var mapNames = JSON.parse(GM_getValue(GM_MAP_NAMES, "[]"));
-var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "[]"));
+var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
 var location = JSON.parse(GM_getValue(GM_CURRENT_LOCATION_INDEX, "[]"));
-console.log("Portals:");
-console.log(portals);
 
 // If we have no data, turn off mapping
 if (maps.length == 0 || mapNames.length == 0 || portals.length == 0) {

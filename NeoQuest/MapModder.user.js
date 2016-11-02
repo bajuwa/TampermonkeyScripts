@@ -90,6 +90,7 @@ var X = 2;
 var Y = 1;
 var Z = 0;
 
+var previouslySelectedPortalLocation = "";
 
 // ================================================
 // =====            CSS/JS Display            =====
@@ -226,6 +227,39 @@ for (var key in TILE_OPTIONS) {
     }));
 }
 
+// For portal dev purposes
+var portalDiv = $('<div></div>')
+.appendTo($('body'))
+.attr("id", "portalDivButtons")
+.css({
+    "position":"fixed",
+    "top":"5px",
+    "left":"5px",
+    "height":"90%",
+    "overflow":"auto",
+    "z-index":"10004",
+    "color":"white",
+    "text-align":"left"
+});
+var portalDivList = $('<div></div>')
+.appendTo($(portalDiv));
+
+var addTwoWayPortalCheckbox = $("<input type=checkbox>Add As Pair</input>").appendTo($(portalDiv));
+
+$('<br><button>Clear All Portals</button>').click(function(){
+    GM_setValue(GM_PORTAL_PAIRS, "{}");
+}).appendTo($(portalDiv));
+
+function loadPortalsForMap(mapIndex) {
+    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
+    $(portalDivList).empty();
+    for (var key in portals) {
+        if (key.startsWith(mapIndex + "-")) {
+            $(portalDivList).append($('<p>' + key + " goes to  " + portals[key][Z] + "-" + portals[key][Y] + "-" + portals[key][X] + "</p>"));
+        }
+    }
+}
+
 // Create a blank div to display options on
 var selectedTile = "";
 var optionsDiv = $('<div id="AutoQuesterOptions"></div>').attr("id", "AutoQuesterOptions").css({
@@ -327,12 +361,30 @@ function drawMap(mapDiv, currentLocation) {
     for (var row = 0; row < numOfRows; row++) {
         var tr = $("<tr></tr>").appendTo($(table));
         for (var col = 0; col < numOfColumns; col++) {
-            var td = $("<td></td>").appendTo($(tr)).mousedown(function() {
-                maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
-                maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = selectedTile;
-                $(this).empty();
-                $(this).append("<img src='" + TILE_OPTIONS[selectedTile] + "' />");
-                GM_setValue(GM_MAPS, JSON.stringify(maps));
+            var td = $("<td></td>").appendTo($(tr)).mousedown(function(e) {
+                if (e.button == 0) { // left click
+                    maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
+                    maps[currentLocation[Z]][$(this).parent("tr").index()][$(this).index()] = selectedTile;
+                    $(this).empty();
+                    $(this).append("<img src='" + TILE_OPTIONS[selectedTile] + "' />");
+                    GM_setValue(GM_MAPS, JSON.stringify(maps));
+                } else if (e.button == 1) { // middle click
+                    e.preventDefault();
+                    if (previouslySelectedPortalLocation.length == 0) {
+                        previouslySelectedPortalLocation = currentLocation[Z] + "-" + $(this).parent("tr").index() + "-" + $(this).index();
+                        console.log("Stored portal hash for later: " + previouslySelectedPortalLocation);
+                    } else {
+                        var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
+                        portals[previouslySelectedPortalLocation] = [currentLocation[Z], $(this).parent("tr").index(), $(this).index()];
+                        if (addTwoWayPortalCheckbox.prop("checked")) {
+                            portals[currentLocation[Z] + "-" + $(this).parent("tr").index() + "-" + $(this).index()] = previouslySelectedPortalLocation.split("-");
+                        }
+                        previouslySelectedPortalLocation = "";
+                        console.log(portals);
+                        GM_setValue(GM_PORTAL_PAIRS, JSON.stringify(portals));
+                        loadPortalsForMap(currentLocation[Z]);
+                    }
+                }
             });
             if (mapTopLeft[Y] + row < 0 || mapTopLeft[X] + col < 0 || mapTopLeft[Y] + row >= maps[mapTopLeft[Z]].length || mapTopLeft[X] + col >= maps[mapTopLeft[Z]][mapTopLeft[Y] + row].length) {
                 $(td).append("<div style='border-style:none;width:" + tileWidth + "px;height:" + tileWidth + "px' />");
@@ -353,6 +405,8 @@ function drawMap(mapDiv, currentLocation) {
     // If drawing a full map, scroll to center
     $(mapDiv).scrollTop(tileWidth * numOfRows * 0.5);
     $(mapDiv).scrollLeft(tileWidth * numOfColumns * 0.5);
+    
+    loadPortalsForMap(currentLocation[Z]);
 
     console.log("Done drawing map");
 }
