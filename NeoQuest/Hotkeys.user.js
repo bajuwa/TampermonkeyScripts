@@ -1,7 +1,11 @@
 // ==UserScript==
 // @name         AutoQuester - Hotkeys
 // @namespace    http://tampermonkey.net/
+<<<<<<< HEAD
 // @version      0.4
+=======
+// @version      0.3
+>>>>>>> master
 // @description  try to take over the world!
 // @author       bajuwa
 // @match        http://www.neopets.com/games/neoquest/neoquest.phtml*
@@ -25,7 +29,7 @@ document.onkeypress = function (e) {
         character = String.fromCharCode(charCode); 
 
     console.log("Recieved event charCode '" + charCode + "' for character '" + character + "'");
-
+	
     // Overworld Hotkeys
     if ($("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
 
@@ -149,9 +153,6 @@ document.onkeypress = function (e) {
                 break;
             case 'v': // 'Use a ...' #4
                 $('a:contains("Use a ")').eq(3).click();
-                break;
-            case 'g': // Click 'Go!' to enter new locations
-                $('a :contains("Go!")').click();
                 break;
         }
     }
