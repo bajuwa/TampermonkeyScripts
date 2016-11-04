@@ -606,11 +606,3 @@ var TODO_LIST_MAIN = ["", 0, [
     ["Techo Caves", TODO_LIST_TECHO_CAVES.length, TODO_LIST_TECHO_CAVES],
     ["Two Rings", TODO_LIST_TWO_RINGS.length, TODO_LIST_TWO_RINGS]
 ]];
-
-
-
-
-
-
-
-
