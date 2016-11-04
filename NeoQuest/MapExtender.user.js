@@ -88,7 +88,6 @@ var GM_PORTAL_PAIRS = "AQ_extendedMap_portalPairs"; // Stores XYZ map locations 
 var GM_CURRENT_LOCATION_INDEX = "AQ_extendedMap_locationIndex"; // Which XYZ location we are on
 var GM_MOVE_DIR = "AQ_extendedMap_moveDir"; // The last direction we moved (just in case we were interupted by an attack)
 var GM_MOVE_LINK = "AQ_extendedMap_moveLink"; // The last portal we travelled through (just in case we were interupted by an attack)
-var GM_DISPLAY_MAP = "AQ_extendedMap_displayMap"; // Whether or not our map is displayed
 var GM_DISPLAY_OVERVIEW = "AQ_extendedMap_displayOverview"; // Whether or not our overview is displayed
 
 var X = 2;
@@ -106,40 +105,32 @@ var RECONFIGURE_POSITION_MESSAGE = "Please reconfigure your character's position
 
 
 // ================================================
+// =====         Custom URL Tracking          =====
+// ================================================
+
+console.log("Blah");
+var bodyData = $(".contentModule");
+var currentWindowUrlDiv = $('span').attr("id","AutoQuesterCustomUrlModifier").attr("data-url",window.location.href).appendTo(".contentModule");
+$(currentWindowUrlDiv).on('click', function() {
+    console.log("Sending get request to: " + $(this).attr("data-url"));
+    $("#AutoQuesterCustomUrlModifier").removeAttr("data-ready");
+    $.get($(this).attr("data-url"), function(data) {
+        var html = $.parseHTML(data);
+        // Double check that we're on a map page (maybe we're on a battle instead)
+        if ($(html).find("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
+            runMapExtenderOnNewData($(html).find(".contentModule"));
+        } else {
+            $(document).html(html);
+        }
+    });
+});
+
+// ================================================
 // =====            CSS/JS Display            =====
 // ================================================
 
-$('body').css("hidden",true);
-
 // Allow user to control whether they are viewing the original NQ screen or our Extended Map screen
-var MAP_DISPLAY_ENABLED = JSON.parse(GM_getValue(GM_DISPLAY_MAP, "false"));
 var mapDiv = $('#AutoQuesterMap');
-if (mapDiv.length == 0) {
-    // Sometimes our Map Blackout script fails to load in time (or isn't installed!) so make the bg ourselves
-    console.log("Map display blackout triggered (from Map Extender!)");
-    mapDiv = $('<div></div>').attr("id", "AutoQuesterMap").css({
-        "position":"fixed",
-        "top":"0",
-        "left":"0",
-        "z-index":"10000",
-        "width":"100%",
-        "height":"100%",
-        "background":"black"
-    }).appendTo($('body'));
-} 
-
-function redisplayMap() {
-    if (MAP_DISPLAY_ENABLED) {
-        console.log("Map display enabled");
-        mapDiv.css("display","");
-        $('body').css("overflow","hidden");
-    } else {
-        console.log("Map display disabled");
-        mapDiv.css("display","none");
-        $('body').css("overflow","auto");
-    }
-}
-redisplayMap();
 
 // Display a series of buttons for dev purposes
 var buttonDiv = $('<div></div>')
@@ -151,19 +142,6 @@ var buttonDiv = $('<div></div>')
     "right":"5px",
     "z-index":"10004"
 });
-
-function setMapExtenderEnable(isEnabled) {
-    MAP_DISPLAY_ENABLED = isEnabled;
-    GM_setValue(GM_DISPLAY_MAP, JSON.stringify(MAP_DISPLAY_ENABLED));
-    redisplayMap();
-}
-
-function toggleMapExtender() {
-    setMapExtenderEnable(!MAP_DISPLAY_ENABLED);
-}
-
-// Display a button to control the redisplay toggling of map vs original
-$('<button>Toggle Map</button>').click(toggleMapExtender).appendTo($(buttonDiv));
 
 // Display a button to all users to reconfigure position
 $('<button>Reconfigure Position</button>').click(function(){
@@ -221,7 +199,6 @@ $('<button>Reconfigure Position</button>').click(function(){
                 switch (e.which) {
                     case 1: // Left-click
                         GM_setValue(GM_CURRENT_LOCATION_INDEX, JSON.stringify(clickedLocation));
-                        setMapExtenderEnable(true);
                         window.location.href = "http://www.neopets.com/games/neoquest/neoquest.phtml";
                         break;
                 }
@@ -278,7 +255,7 @@ jQuery.fn.center = function () {
 // Copies the original NQ displayed information/images onto the given map div element
 function copyOriginalContent(mapDiv, mapNames, mapIndex) {
     // Find the original content of the page that we've drawn over and add it to our map area
-    var contentCopy = $('div[class="contentModuleHeader"]').eq(0).next().clone();
+    var contentCopy = $(bodyData).find('div[class="contentModuleHeader"]').eq(0).next().clone();
     var contentContainer = $("<div>").appendTo($(mapDiv)).css({
         "position": "absolute",
         "width": "100%",
@@ -296,15 +273,15 @@ function copyOriginalContent(mapDiv, mapNames, mapIndex) {
     contentCopy.find("input[name='say']").first().remove();
     contentCopy.find("input[name='give']").first().remove();
     contentCopy.find("input[value*='items']").on("click", function(){
-        console.log($('body').find("input[value*='items']").first());
-        $('body').find("input[value*='items']").first().click();
+        console.log($(bodyData).find("input[value*='items']").first());
+        $(bodyData).find("input[value*='items']").first().click();
     });
     contentCopy.find("input[type=radio]").on("click", function(){
-        $('body').find("input[name=" + $(this).attr('name') + "]").first().click();
+        $(bodyData).find("input[name=" + $(this).attr('name') + "]").first().click();
     });
 
     // If we have a map, port over the player information/links (without the map/navigation tables)
-    var mapName = $('td:contains("You are in")').text()
+    var mapName = $(bodyData).find('td:contains("You are in")').text()
     mapName = mapName.substring(mapName.indexOf("You are in") + "You are in".length);
     mapName = mapName.split("the ").join("");
     mapName = mapName.substring(0, mapName.indexOf("."));
@@ -395,8 +372,8 @@ function getNewLocationAfterMove(oldLocation, moveDirection) {
 
     // Using the old location as a starting point, calculate the new coordinate
     var newCoord = [0,0,0];
-    newCoord[X] = oldLocation[X] + relativeCoords[X];
-    newCoord[Y] = oldLocation[Y] + relativeCoords[Y];
+    newCoord[X] = parseInt(oldLocation[X]) + relativeCoords[X];
+    newCoord[Y] = parseInt(oldLocation[Y]) + relativeCoords[Y];
     newCoord[Z] = oldLocation[Z];
 
     console.log("Calculated new coordinate: " + newCoord);
@@ -438,7 +415,7 @@ function moveMainCharacter(oldLocation, maps, portals) {
         } else {
             console.log("Unable to find portal, creating new map and location");
             alert("Whoops!  Looks like Map Extender couldn't find out where this portal lead to... " + RECONFIGURE_POSITION_MESSAGE);
-            setMapExtenderEnable(false);
+            $(mapDiv).remove();
         }
     }
 }
@@ -450,7 +427,7 @@ function moveMainCharacter(oldLocation, maps, portals) {
 
 function checkForContradictions(currentLocation, maps, portals) {
     var n = 0;
-    var mapDim = [$('img[src^="http://images.neopets.com/nq/t"]').closest("tr").length, $('img[src^="http://images.neopets.com/nq/t"]').closest("tr").eq(0).find("td").length - 2];
+    var mapDim = [$(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').closest("tr").length, $(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').closest("tr").eq(0).find("td").length - 2];
     console.log("Map dim: " + mapDim);
     var halfMapSize = [Math.floor(mapDim[0]/2), Math.floor(mapDim[1]/2)];
     console.log("halfMapSize: " + halfMapSize);
@@ -460,7 +437,8 @@ function checkForContradictions(currentLocation, maps, portals) {
     console.log("bottomRightCoord: " + bottomRightCoord);
     
     console.log("Top left coord from current position: " + topLeftCoord);
-    $('img[src^="http://images.neopets.com/nq/t"]').each(function(){
+    console.log($(bodyData).find('img[src^="http://images.neopets.com/nq/t"]'));
+    $(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').each(function(){
         var currentRow = topLeftCoord[Y] + Math.floor(n / mapDim[1]);
         var currentColumn = topLeftCoord[X] + (n % mapDim[1]);
         var newTile = $(this).attr('src').substring($(this).attr('src').lastIndexOf("/") + 1, $(this).attr('src').lastIndexOf("."));
@@ -479,11 +457,11 @@ function checkForContradictions(currentLocation, maps, portals) {
     });
 
     // If a contradiction was found, we need to alert the user to reconfigure
-    if (n < $('img[src^="http://images.neopets.com/nq/t"]').length - 1) {
+    if (n < $(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').length - 1) {
         // Create a new blank map and move current location to the new map (let the player/user reconfigure position or blend maps)
         console.log("Detected map contradiction, alerting user to reconfigure");
         alert("Whoops!  Looks like Map Extender got a little confused as to where you are. " + RECONFIGURE_POSITION_MESSAGE);
-        setMapExtenderEnable(false);
+        $(mapDiv).remove();
         return true;
     }
     return false;
@@ -501,7 +479,7 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
 
     // Initialize displayed map size to full map image
     var table = $("<table cellspacing='0' cellpadding='0'></table>").appendTo($(mapDiv)).css("border","none");
-    var tileWidth = $('img[src^="http://images.neopets.com/nq/t"]').eq(0).width();
+    var tileWidth = 40;
     var mapTopLeft = currentLocation;
     var numOfRows = map.length - mapTopLeft[Y];
     var numOfColumns = map[0].length - mapTopLeft[X];
@@ -516,7 +494,7 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
     // Draw the seeable map range
     console.log("Drawing map with <" + numOfRows + "> rows and <" + numOfColumns + "> columns");
     console.log("Map top left: " + mapTopLeft);
-    var lupeImage = $('img[src^="http://images.neopets.com/nq/tl/lupe"]').eq(0);
+    var lupeImage = $(bodyData).find('img[src^="http://images.neopets.com/nq/tl/lupe"]').eq(0);
     for (var row = 0; row < numOfRows; row++) {
         var tr = $("<tr></tr>").appendTo($(table));
         for (var col = 0; col < numOfColumns; col++) {
@@ -546,53 +524,73 @@ function drawMap(mapDiv, currentLocation, maps, drawFullMap, mouseDownHandler) {
     console.log("Done drawing map");
 }
 
-// Detect which direction we moved (we may have been interupted by a battle/etc, so store it for later!)
-if (window.location.href.indexOf("action=move&movedir=") >= 0) {
-    GM_setValue(GM_MOVE_DIR, window.location.href.slice(-1));
-} else if (window.location.href.indexOf("action=move&movelink=") >= 0) {
-    GM_setValue(GM_MOVE_LINK, window.location.href.substring(window.location.href.lastIndexOf("=")+1));
-} 
+function runMapExtenderOnNewData(data) {
+    bodyData = $(data);
+    
+    // Detect which direction we moved (we may have been interupted by a battle/etc, so store it for later!)
+    var url = $(currentWindowUrlDiv).attr("data-url");
+    if ($(bodyData).find("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length == 0) {
+        // We're probably not on a map page, don't draw map...
+        console.log("Not on a map page, aborting map extender");
+        return;
+    } else if (url.indexOf("action=move&movedir=") >= 0) {
+        GM_setValue(GM_MOVE_DIR, url.slice(-1));
+    } else if (url.indexOf("action=move&movelink=") >= 0) {
+        GM_setValue(GM_MOVE_LINK, url.substring(url.lastIndexOf("=")+1));
+    } 
+    
+    if (mapDiv.length == 0) {
+        // Sometimes our Map Blackout script fails to load in time (or isn't installed!) so make the bg ourselves
+        console.log("Map display blackout triggered (from Map Extender!)");
+        mapDiv = $('<div></div>').attr("id", "AutoQuesterMap").css({
+            "position":"fixed",
+            "top":"0",
+            "left":"0",
+            "z-index":"10000",
+            "width":"100%",
+            "height":"100%",
+            "background":"black"
+        }).appendTo($('body'));
+    } 
 
-// Load our map information
-var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
-var mapNames = JSON.parse(GM_getValue(GM_MAP_NAMES, "[]"));
-var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
-var location = JSON.parse(GM_getValue(GM_CURRENT_LOCATION_INDEX, "[]"));
+    // Load our map information
+    var maps = JSON.parse(GM_getValue(GM_MAPS, "[]"));
+    var mapNames = JSON.parse(GM_getValue(GM_MAP_NAMES, "[]"));
+    var portals = JSON.parse(GM_getValue(GM_PORTAL_PAIRS, "{}"));
+    var location = JSON.parse(GM_getValue(GM_CURRENT_LOCATION_INDEX, "[]"));
 
-// If we have no data, turn off mapping
-if (maps.length == 0 || mapNames.length == 0 || portals.length == 0) {
-    console.log("Detected empty map data, alerting user and disabling map extender");
-    alert("Whoops!  Looks like Map Extender can't find any map data, make sure you've imported a MapExtender.storage.json file in order to use this script!");
-    setMapExtenderEnable(false);
-} else if (location.length == 0) {
-    console.log("Detected empty location data");
-    alert("Whoops!  Looks like Map Extender can't figure out where your character is.  " + RECONFIGURE_POSITION_MESSAGE);
-    setMapExtenderEnable(false);
-}
+    // If we have no data, turn off mapping
+    if (maps.length == 0 || mapNames.length == 0 || portals.length == 0) {
+        console.log("Detected empty map data, alerting user and disabling map extender");
+        alert("Whoops!  Looks like Map Extender can't find any map data, make sure you've imported a MapExtender.storage.json file in order to use this script!");
+        $(mapDiv).remove();
+    } else if (location.length == 0) {
+        console.log("Detected empty location data");
+        alert("Whoops!  Looks like Map Extender can't figure out where your character is.  " + RECONFIGURE_POSITION_MESSAGE);
+        $(mapDiv).remove();
+    }
+    
+    // Clear old map
+    $(mapDiv).empty();
 
-// Using stored move direction/links, update our characters location
-moveMainCharacter(location, maps, portals);
+    // Using stored move direction/links, update our characters location
+    moveMainCharacter(location, maps, portals);
 
-// Determine if we draw our own map and redisplay the original content
-if ($('img[src^="http://images.neopets.com/nq/t"]').length == 0) {
-    // Hide the map and just show a regular neoquest page for non-map pages
-    mapDiv.css("display","none");
-    $('body').css("overflow","auto");
-
-    // Also hide the buttons, they won't have any effect anyways
-    $("#devButtons").css("display","none");
-} else {
     // Make sure we are aligned with the original NQ map
     if (!checkForContradictions(location, maps, portals)) {
         copyOriginalContent(mapDiv, mapNames, location[Z]);
         drawMap(mapDiv, location, maps);
     }
+    
+    $("#AutoQuesterCustomUrlModifier").attr("data-ready","");
+
+    // DEV: Print out all our stored data
+    console.log("Maps:");
+    console.log(maps);
+    console.log("Portals:");
+    console.log(portals);
+    console.log("Location:");
+    console.log(location);
 }
 
-// DEV: Print out all our stored data
-console.log("Maps:");
-console.log(maps);
-console.log("Portals:");
-console.log(portals);
-console.log("Location:");
-console.log(location);
+runMapExtenderOnNewData($(document).find(".contentModule"));
