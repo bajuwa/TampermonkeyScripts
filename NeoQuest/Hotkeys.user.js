@@ -1,11 +1,7 @@
 // ==UserScript==
 // @name         AutoQuester - Hotkeys
 // @namespace    http://tampermonkey.net/
-<<<<<<< HEAD
 // @version      0.4
-=======
-// @version      0.3
->>>>>>> master
 // @description  try to take over the world!
 // @author       bajuwa
 // @match        http://www.neopets.com/games/neoquest/neoquest.phtml*

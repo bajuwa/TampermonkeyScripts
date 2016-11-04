@@ -108,7 +108,6 @@ var RECONFIGURE_POSITION_MESSAGE = "Please reconfigure your character's position
 // =====         Custom URL Tracking          =====
 // ================================================
 
-console.log("Blah");
 var bodyData = $(".contentModule");
 var currentWindowUrlDiv = $('span').attr("id","AutoQuesterCustomUrlModifier").attr("data-url",window.location.href).appendTo(".contentModule");
 $(currentWindowUrlDiv).on('click', function() {
@@ -121,6 +120,7 @@ $(currentWindowUrlDiv).on('click', function() {
             runMapExtenderOnNewData($(html).find(".contentModule"));
         } else {
             $(document).html(html);
+			// TODO: trigger saves that would occur prior to battle (to pick up movements normally saved on page reload)
         }
     });
 });
