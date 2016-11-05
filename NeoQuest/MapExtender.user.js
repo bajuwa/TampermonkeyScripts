@@ -113,14 +113,16 @@ var currentWindowUrlDiv = $('span').attr("id","AutoQuesterCustomUrlModifier").at
 $(currentWindowUrlDiv).on('click', function() {
     console.log("Sending get request to: " + $(this).attr("data-url"));
     $("#AutoQuesterCustomUrlModifier").removeAttr("data-ready");
-    $.get($(this).attr("data-url"), function(data) {
+    $.get($("#AutoQuesterCustomUrlModifier").attr("data-url"), function(data) {
+        detectMovedDirectionFromUrl($("#AutoQuesterCustomUrlModifier").attr("data-url"));
         var html = $.parseHTML(data);
         // Double check that we're on a map page (maybe we're on a battle instead)
         if ($(html).find("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
             runMapExtenderOnNewData($(html).find(".contentModule"));
         } else {
-            $(document).html(html);
-			// TODO: trigger saves that would occur prior to battle (to pick up movements normally saved on page reload)
+            console.log("Trying to set body to: " + $(html).find("body").html());
+            $("body").replaceWith($(html));
+            $(mapDiv).remove();
         }
     });
 });
@@ -425,6 +427,14 @@ function moveMainCharacter(oldLocation, maps, portals) {
 // =====          Map Extender Logic          =====
 // ================================================
 
+function detectMovedDirectionFromUrl(url) {
+    if (url.indexOf("action=move&movedir=") >= 0) {
+        GM_setValue(GM_MOVE_DIR, url.slice(-1));
+    } else if (url.indexOf("action=move&movelink=") >= 0) {
+        GM_setValue(GM_MOVE_LINK, url.substring(url.lastIndexOf("=")+1));
+    }
+}
+
 function checkForContradictions(currentLocation, maps, portals) {
     var n = 0;
     var mapDim = [$(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').closest("tr").length, $(bodyData).find('img[src^="http://images.neopets.com/nq/t"]').closest("tr").eq(0).find("td").length - 2];
@@ -533,11 +543,7 @@ function runMapExtenderOnNewData(data) {
         // We're probably not on a map page, don't draw map...
         console.log("Not on a map page, aborting map extender");
         return;
-    } else if (url.indexOf("action=move&movedir=") >= 0) {
-        GM_setValue(GM_MOVE_DIR, url.slice(-1));
-    } else if (url.indexOf("action=move&movelink=") >= 0) {
-        GM_setValue(GM_MOVE_LINK, url.substring(url.lastIndexOf("=")+1));
-    } 
+    }
     
     if (mapDiv.length == 0) {
         // Sometimes our Map Blackout script fails to load in time (or isn't installed!) so make the bg ourselves
@@ -593,4 +599,5 @@ function runMapExtenderOnNewData(data) {
     console.log(location);
 }
 
+detectMovedDirectionFromUrl($(currentWindowUrlDiv).attr("data-url"));
 runMapExtenderOnNewData($(document).find(".contentModule"));

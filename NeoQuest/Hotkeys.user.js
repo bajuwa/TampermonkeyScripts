@@ -14,7 +14,6 @@
 var $ = window.jQuery;
 
 var LIMIT_NAV_SPAMMING = true; // If you want to make sure you don't accidentally travel more than 1 space at a time (or any other action past your first input), set this to 'true'; Otherwise, set to 'false'.
-// Note: If you're using Map Extender, keep this set to 'true' to avoid map misalignments!!!
 
 // Allow player to use keyboard shortcuts
 var hasSentNavAction = false;
@@ -162,7 +161,7 @@ function navigateTo(url) {
             $('#AutoQuesterCustomUrlModifier').click();
         }
     } else {
-        if (!hasSentNavAction) {
+        if (!LIMIT_NAV_SPAMMING || !hasSentNavAction) {
             console.log("Navigating via window.location.href to " + url);
             window.location.href = url;
         }
