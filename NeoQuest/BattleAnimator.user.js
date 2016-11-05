@@ -10,7 +10,7 @@
 /* jshint -W097 */
 'use strict';
 
-if ($('img[src="http://images.neopets.com/nq/n/lupe_combat.gif"]').length == 0) {
+if ($('img[src^="http://images.neopets.com/nq/n/lupe_"]').length == 0) {
     return;
 }
 
@@ -31,9 +31,9 @@ $(currentWindowUrlDiv).on('click', function() {
     $.get($("#AutoQuesterCustomUrlModifier").attr("data-url"), function(data) {
         var html = $.parseHTML(data);
         // Double check that we're on a map page (maybe we're on a battle instead)
-        if ($(html).find('img[src="http://images.neopets.com/nq/n/lupe_combat.gif"]').length > 0) {
-            detectAndDisplaySHH($(html));
+        if ($(html).find('img[src^="http://images.neopets.com/nq/n/lupe_"]').length > 0) {
             runBattleAnimatorOnNewData($(html).find(".contentModule"));
+            detectAndDisplaySHH($(html));
         }
     });
 });
@@ -49,7 +49,7 @@ function detectAndDisplaySHH(body) {
     if (shhEvent != undefined) {
         alert("Something has happened!");
         console.log($(shhEvent));
-        $("<div>").append($(shhEvent)).appendTo($(mapDiv)).css({
+        $("<div>").append($(shhEvent)).appendTo($(battleDiv)).css({
             "top":"5px",
             "width":"100%",
             "text-align":"center"
@@ -71,7 +71,8 @@ var battleDiv = $('#AutoQuesterBattle');
 // Copies the original NQ displayed information/images onto the given map div element
 function copyOriginalContent() {
     // Find the original content of the page that we've drawn over and add it to our map area
-    var contentCopy = $(bodyData).find('img[src="http://images.neopets.com/nq/n/lupe_combat.gif"]').closest("table").clone();
+    var contentCopy = $(bodyData).find('img[src^="http://images.neopets.com/nq/n/lupe_"]').closest("table, center").clone();
+    console.log(contentCopy);
     var contentContainer = $("<div>").appendTo($(battleDiv)).css({
         "top": "50%",
         "transform": "translateY(-50%)",
@@ -89,6 +90,12 @@ function copyOriginalContent() {
     contentCopy.find("input[name='fact']").first().remove();
     contentCopy.find("input[name='type']").first().remove();
     contentCopy.find("form[action='neoquest.phtml']").first().remove();
+
+    // Find the original content of the page that we've drawn over and add it to our map area
+    var level = $(bodyData).find('div[class="contentModuleHeader"]').eq(0).next().find("b").eq(1).text();
+    if (level != undefined) {
+        $("<span>Level : <b>" + level + "</b><br></span>").insertAfter($(contentCopy).find("tr").eq(3).find("td").eq(0).find("br").eq(0))
+    }
 }
 
 function runBattleAnimatorOnNewData(data) {
@@ -96,7 +103,7 @@ function runBattleAnimatorOnNewData(data) {
     
     // Detect which direction we moved (we may have been interupted by a battle/etc, so store it for later!)
     var url = $(currentWindowUrlDiv).attr("data-url");
-    if ($(bodyData).find('img[src="http://images.neopets.com/nq/n/lupe_combat.gif"]').length == 0) {
+    if ($(bodyData).find('img[src^="http://images.neopets.com/nq/n/lupe_"]').length == 0) {
         // We're probably not on a map page, don't draw map...
         console.log("Not on a battle page, aborting battle animator");
         return;
@@ -122,5 +129,5 @@ function runBattleAnimatorOnNewData(data) {
     $("#AutoQuesterCustomUrlModifier").attr("data-ready","");
 }
 
-detectAndDisplaySHH($(document));
 runBattleAnimatorOnNewData($(document).find(".contentModule"));
+detectAndDisplaySHH($(document));

@@ -38,10 +38,13 @@ document.onkeypress = function (e) {
         case 32:
             e.preventDefault();
             // Default 'next' action
-            $('input[value="Click here to begin the fight!"]').click();
-            $('input[value="Click here to return to the map"]').click();
-            $('input[value="Click here to return to Neopia City"]').click();
-
+            if ($('input[value^="Click here"]').length > 0) {
+                $('input[value^="Click here"]').click();
+            } else if ($('a:contains("Click here")').length > 0) {
+                navigateTo($('a:contains("Click here")').attr("href"));
+            } else {
+                window.location.href = "http://www.neopets.com/games/neoquest/neoquest.phtml";
+            }
             return;
     }
 	
@@ -159,7 +162,6 @@ function useItem(index) {
 }
 
 function navigateTo(url) {
-    console.log("Navigating to: " + url);
     if ($('#AutoQuesterCustomUrlModifier').length > 0) {
         if ($("#AutoQuesterCustomUrlModifier")[0].hasAttribute("data-ready")) {
             console.log("Navigating via #AutoQuesterCustomUrlModifier to " + url);

@@ -126,8 +126,8 @@ $(currentWindowUrlDiv).on('click', function() {
         var html = $.parseHTML(data);
         // Double check that we're on a map page (maybe we're on a battle instead)
         if ($(html).find("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
-            detectAndDisplaySHH($(html));
             runMapExtenderOnNewData($(html).find(".contentModule"));
+            detectAndDisplaySHH($(html));
         } else {
             var container = $("<div>").appendTo($(mapDiv)).css({
                 "top": "50%",
@@ -635,6 +635,6 @@ function runMapExtenderOnNewData(data) {
     console.log(location);
 }
 
-detectAndDisplaySHH($(document));
 detectMovedDirectionFromUrl($(currentWindowUrlDiv).attr("data-url"));
 runMapExtenderOnNewData($(document).find(".contentModule"));
+detectAndDisplaySHH($(document));
