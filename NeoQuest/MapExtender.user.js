@@ -302,21 +302,8 @@ function copyOriginalContent(mapDiv, mapNames, mapIndex) {
     contentCopy.appendTo($(contentContainer));
 
     // Remove the duplicated form from our copy to allow links to work properly
-    contentCopy.find("form[name='ff']").first().remove();
-    contentCopy.find("input[name='fact']").first().remove();
-    contentCopy.find("input[name='type']").first().remove();
-    contentCopy.find("form[action='neoquest.phtml']").first().remove();
     contentCopy.find("input[name='action']").first().remove();
     contentCopy.find("input[name='target']").first().remove();
-    contentCopy.find("input[name='say']").first().remove();
-    contentCopy.find("input[name='give']").first().remove();
-    contentCopy.find("input[value*='items']").on("click", function(){
-        console.log($(bodyData).find("input[value*='items']").first());
-        $(bodyData).find("input[value*='items']").first().click();
-    });
-    contentCopy.find("input[type=radio]").on("click", function(){
-        $(bodyData).find("input[name=" + $(this).attr('name') + "]").first().click();
-    });
 
     // If we have a map, port over the player information/links (without the map/navigation tables)
     var mapName = $(bodyData).find('td:contains("You are in")').text()

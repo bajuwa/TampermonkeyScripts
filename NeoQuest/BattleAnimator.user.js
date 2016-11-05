@@ -71,7 +71,7 @@ var battleDiv = $('#AutoQuesterBattle');
 // Copies the original NQ displayed information/images onto the given map div element
 function copyOriginalContent() {
     // Find the original content of the page that we've drawn over and add it to our map area
-    var contentCopy = $(bodyData).find('img[src^="http://images.neopets.com/nq/n/lupe_"]').closest("table, center").clone();
+    var contentCopy = $(bodyData).find('img[src^="http://images.neopets.com/nq/n/lupe_"]').closest("table, div").clone();
     console.log(contentCopy);
     var contentContainer = $("<div>").appendTo($(battleDiv)).css({
         "top": "50%",
@@ -89,7 +89,6 @@ function copyOriginalContent() {
     contentCopy.find("form[name='ff']").first().remove();
     contentCopy.find("input[name='fact']").first().remove();
     contentCopy.find("input[name='type']").first().remove();
-    contentCopy.find("form[action='neoquest.phtml']").first().remove();
 
     // Find the original content of the page that we've drawn over and add it to our map area
     var level = $(bodyData).find('div[class="contentModuleHeader"]').eq(0).next().find("b").eq(1).text();
