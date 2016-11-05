@@ -103,13 +103,21 @@ var BLOCKING_TILES = ["water_iso", "water_lu", "water_u", "water_ru", "water_l",
 
 var RECONFIGURE_POSITION_MESSAGE = "Please reconfigure your character's position by using the 'Reconfigure Position' button on the bottom right.  If you need more help, make sure to check out the 'Misaligned State' section of the Wiki!";
 
+if ($('img[src="http://images.neopets.com/nq/n/navarrows.gif"]').length == 0) {
+    return;
+}
 
 // ================================================
 // =====         Custom URL Tracking          =====
 // ================================================
 
 var bodyData = $(".contentModule");
-var currentWindowUrlDiv = $('span').attr("id","AutoQuesterCustomUrlModifier").attr("data-url",window.location.href).appendTo(".contentModule");
+var currentWindowUrlDiv;
+if ($("#AutoQuesterCustomUrlModifier").length > 0) {
+    currentWindowUrlDiv = $("#AutoQuesterCustomUrlModifier");
+} else {
+    currentWindowUrlDiv = $('span').attr("id","AutoQuesterCustomUrlModifier").attr("data-url",window.location.href).appendTo(".contentModule");
+}
 $(currentWindowUrlDiv).on('click', function() {
     console.log("Sending get request to: " + $(this).attr("data-url"));
     $("#AutoQuesterCustomUrlModifier").removeAttr("data-ready");
@@ -118,14 +126,42 @@ $(currentWindowUrlDiv).on('click', function() {
         var html = $.parseHTML(data);
         // Double check that we're on a map page (maybe we're on a battle instead)
         if ($(html).find("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
+            detectAndDisplaySHH($(html));
             runMapExtenderOnNewData($(html).find(".contentModule"));
         } else {
-            console.log("Trying to set body to: " + $(html).find("body").html());
-            $("body").replaceWith($(html));
-            $(mapDiv).remove();
+            var container = $("<div>").appendTo($(mapDiv)).css({
+                "top": "50%",
+                "transform": "translateY(-50%)",
+                "position":"fixed",
+                "width":"100%",
+                "text-align":"center"
+            });
+            $("<div>").appendTo($(container)).append($(html).find('img[src^="http://images.neopets.com/nq/m/"]').closest("center")).css({
+                "background":"white",
+                "margin":"0 auto"
+            });
         }
     });
 });
+
+function detectAndDisplaySHH(body) {
+    var shhEvent;
+    if ($(body).find('div.randomEvent').length > 0) {
+        shhEvent = $(body).find('div.randomEvent');
+    } else if ($(body).find('img[src^="http://images.neopets.com/shh/"]').length > 0) {
+        shhEvent = $(body).find('img[src^="http://images.neopets.com/shh/"]').closest("div");
+    }
+
+    if (shhEvent != undefined) {
+        alert("Something has happened!");
+        console.log($(shhEvent));
+        $("<div>").append($(shhEvent)).appendTo($(mapDiv)).css({
+            "top":"5px",
+            "width":"100%",
+            "text-align":"center"
+        });
+    }
+}
 
 // ================================================
 // =====            CSS/JS Display            =====
@@ -599,5 +635,6 @@ function runMapExtenderOnNewData(data) {
     console.log(location);
 }
 
+detectAndDisplaySHH($(document));
 detectMovedDirectionFromUrl($(currentWindowUrlDiv).attr("data-url"));
 runMapExtenderOnNewData($(document).find(".contentModule"));

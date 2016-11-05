@@ -15,6 +15,14 @@ var $ = window.jQuery;
 
 var LIMIT_NAV_SPAMMING = true; // If you want to make sure you don't accidentally travel more than 1 space at a time (or any other action past your first input), set this to 'true'; Otherwise, set to 'false'.
 
+var NAME_TO_FACT_TYPE = {
+    "Spirit of Growth" : 200019,
+    "Weak Healing Potion" : 220000,
+    "Standard Healing Potion" : 220001,
+    "Strong Healing Potion" : 220002,
+    "Greater Healing Potion" : 220003
+};
+
 // Allow player to use keyboard shortcuts
 var hasSentNavAction = false;
 document.onkeypress = function (e) { 
@@ -24,6 +32,18 @@ document.onkeypress = function (e) {
         character = String.fromCharCode(charCode); 
 
     console.log("Recieved event charCode '" + charCode + "' for character '" + character + "'");
+    
+    // Spacebar
+    switch (charCode) {
+        case 32:
+            e.preventDefault();
+            // Default 'next' action
+            $('input[value="Click here to begin the fight!"]').click();
+            $('input[value="Click here to return to the map"]').click();
+            $('input[value="Click here to return to Neopia City"]').click();
+
+            return;
+    }
 	
     // Overworld Hotkeys
     if ($("img[src='http://images.neopets.com/nq/n/navarrows.gif']").length > 0) {
@@ -85,75 +105,61 @@ document.onkeypress = function (e) {
         }
 
     } else if (window.location.href.indexOf("action=talk") >= 0) {
-        // Spacebar
-        switch (charCode) {
-            case 32:
-                e.preventDefault();
-                // Default 'next' action
-                $('input[value="Click here to begin the fight!"]').click();
-                $('input[value="Click here to return to the map"]').click();
-                $('input[value="Click here to return to Neopia City"]').click();
-
-                break;
-        }
-
         // NPC Chat Hotkeys
         window.location.href = $('a[href^="neoquest.phtml?action=talk"').eq(parseInt(charCode)-49).attr("href");
     } else if ($("img[src^='http://images.neopets.com/nq/n/lupe_']").length > 0 || $("img[src^='http://images.neopets.com/nq/m/']").length > 0) {
         // Battle Hotkeys
         
-        // Spacebar
-        switch (charCode) {
-            case 32:
-                e.preventDefault();
-                // Default 'next' action
-                $('input[value="Click here to begin the fight!"]').click();
-                $('input[value="Click here to return to the map"]').click();
-                $('input[value="Click here to return to Neopia City"]').click();
-                $('a :contains("Click here")').click();
-
-                break;
-        }
-
         switch (character) {
             case 'a': // Attack
-                $('a:contains("Attack")').click();
+                navigateTo("neoquest.phtml?fact=attack&type=0");
                 break;
             case 'f': // Flee
-                $('a:contains("Flee")').click();
+                navigateTo("neoquest.phtml?fact=flee&type=0");
                 break;
             case 'd': // Do Nothing
-                $('a:contains("Do nothing")').click();
+                navigateTo("neoquest.phtml?fact=noop&type=0");
                 break;
             case 'q': // Skill #1
-                $('a:contains("Cast")').eq(0).click();
+                castSpell(0);
                 break;
             case 'w': // Skill #2
-                $('a:contains("Cast")').eq(1).click();
+                castSpell(1);
                 break;
             case 'e': // Skill #3
-                $('a:contains("Cast")').eq(2).click();
+                castSpell(2);
                 break;
             case 'r': // Skill #4
-                $('a:contains("Cast")').eq(3).click();
+                castSpell(3);
                 break;
             case 'z': // 'Use a ...' #1
-                $('a:contains("Use a ")').eq(0).click();
+                useItem(0);
                 break;
             case 'x': // 'Use a ...' #2
-                $('a:contains("Use a ")').eq(1).click();
+                useItem(1);
                 break;
             case 'c': // 'Use a ...' #3
-                $('a:contains("Use a ")').eq(2).click();
+                useItem(2);
                 break;
             case 'v': // 'Use a ...' #4
-                $('a:contains("Use a ")').eq(3).click();
+                useItem(3);
                 break;
         }
     }
 };
 
+function castSpell(index) {
+    navigateTo("neoquest.phtml?fact=special&type=" + NAME_TO_FACT_TYPE[$('a:contains("Cast")').eq(index).find("i").text()])
+}
+
+function useItem(index) {
+    var itemName = $('a:contains("Use a")').eq(index).text();
+    itemName = itemName.substring(6,itemName.indexOf("(")).trim();
+    navigateTo("neoquest.phtml?fact=item&type=" + NAME_TO_FACT_TYPE[itemName]);
+}
+
 function navigateTo(url) {
+    console.log("Navigating to: " + url);
     if ($('#AutoQuesterCustomUrlModifier').length > 0) {
         if ($("#AutoQuesterCustomUrlModifier")[0].hasAttribute("data-ready")) {
             console.log("Navigating via #AutoQuesterCustomUrlModifier to " + url);
