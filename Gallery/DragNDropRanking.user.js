@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoHelper - Gallery Organizer
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      1.0
 // @description  try to take over the world!
 // @author       bajuwa
 // @match        http://www.neopets.com/gallery/*
