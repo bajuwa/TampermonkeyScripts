@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         AutoHelper - Gallery Organizer
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  try to take over the world!
 // @author       bajuwa
-// @match        http://www.neopets.com/gallery/*
+// @match        https://www.neopets.com/gallery/*
 // @require      http://code.jquery.com/jquery-latest.js
 // ==/UserScript==
 /* jshint -W097 */
@@ -15,8 +15,8 @@
 // --------------------------
 
 var CATEGORY_SUMMARY_ENABLED = true; // If 'true', it will show a panel in the top left summarizing categories and item counts
-var RELOCATE_SUBMIT_BUTTON = true;   // If 'true', it will move the submit button to always be in the top right corner
-var HIGHLIGHT_COLOUR = "#68ebeb";       // The colour of the backgrounds/highlights that appear when hovering a dragged image over another location;  Can be either real world ("white") or hex ("#ffffff")
+var RELOCATE_SUBMIT_BUTTON = true; // If 'true', it will move the submit button to always be in the top right corner
+var HIGHLIGHT_COLOUR = "#68ebeb"; // The colour of the backgrounds/highlights that appear when hovering a dragged image over another location;  Can be either real world ("white") or hex ("#ffffff")
 
 // ------------------------------
 // END USER-CONTROLLED SETTINGS
@@ -25,7 +25,7 @@ var HIGHLIGHT_COLOUR = "#68ebeb";       // The colour of the backgrounds/highlig
 
 console.log = function() {};
 var $ = window.jQuery;
-var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
+var _dragElement; // needs to be passed from OnMouseDown to OnMouseMove
 
 if (CATEGORY_SUMMARY_ENABLED) {
 	// Find all the category names
@@ -52,8 +52,8 @@ if (CATEGORY_SUMMARY_ENABLED) {
 		var el = document.createElement("div");
 		el.setAttribute("style","text-align:left;position:fixed;top:0%;left:0%;background-color:white;font-weight: bold;");
 		var innerHTML = "<table>";
-		for (var i = 0; i < categories.length; i++) {
-			innerHTML += "<tr><td> " + categories[i][0] + ": </td><td>" + categories[i][1] + "</td></tr>";
+		for (var j = 0; j < categories.length; j++) {
+			innerHTML += "<tr><td> " + categories[j][0] + ": </td><td>" + categories[j][1] + "</td></tr>";
 		}
 		innerHTML += "</table>";
 		el.innerHTML += innerHTML;
@@ -71,18 +71,18 @@ if (window.location.href.indexOf("dowhat=rank") >= 0) {
 
 	if (RELOCATE_SUBMIT_BUTTON) {
 		// Move the submit button somewhere useful
-		$(".save_rank").css({
+		$(".save_rank1").css({
 			"position":"fixed",
-			"top":"0",
-			"right":"0"
+			"top":"0px",
+			"right":"0px"
 		});
 	}
 }
-	
+
 function setupDraggableItems() {
 	ordering = [];
     //$("form[name=gallery_form]").find("table").css({"border-collapse":"collapse"});
-	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').each(function(){
+	$("form[name=gallery_form]").find('img[src^="//images.neopets.com/items/"]').each(function(){
 		// Make imgs draggable (do this first so it will be included in the saved html)
 		$(this).addClass("drag");
         $(this).attr("data-old_background", $(this).css("background") == null ? "inherit" : $(this).css("background"));
@@ -90,7 +90,7 @@ function setupDraggableItems() {
         $(this).closest("td").css({ "border-right" : "3px solid transparent" });
         addMouseEventsToItem($(this));
         addMouseEventsToItem($(this).closest("td"));
-	  
+
 		// Reset the ordered rank numbers
 		var item = new Object();
 		item.imageTd = $(this).closest("td").html();
@@ -132,9 +132,9 @@ function addMouseEventsToItem(item) {
 
 function rerankAllObjects(startIndex, endIndex) {
 	startIndex = startIndex || 0;
-	endIndex = endIndex || $("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').length;
+	endIndex = endIndex || $("form[name=gallery_form]").find('img[src^="//images.neopets.com/items/"]').length;
 	var currentRank = startIndex;
-	$("form[name=gallery_form]").find('img[src^="http://images.neopets.com/items/"]').closest("td").slice(startIndex, endIndex+1).each(function(){
+	$("form[name=gallery_form]").find('img[src^="//images.neopets.com/items/"]').closest("td").slice(startIndex, endIndex+1).each(function(){
 		// Reset the ordered rank numbers
 		setRankOfImageTd($(this), ++currentRank);
 	});
@@ -159,13 +159,15 @@ function applyOrderingItemToGalleryTds(tdArray, ordering, index) {
 }
 
 // Draggable images borrowed code from: http://luke.breuer.com/tutorial/javascript-drag-and-drop-tutorial.aspx
-var _startX = 0;            // mouse starting positions
+var _startX = 0; // mouse starting positions
 var _startY = 0;
-var _offsetX = 0;           // current element offset
+var _offsetX = 0; // current element offset
 var _offsetY = 0;
 // Moved this declaration to top, needed for hover event detection
 //var _dragElement;           // needs to be passed from OnMouseDown to OnMouseMove
-var _oldZIndex = 0;         // we temporarily increase the z-index during drag
+var _oldZIndex = 0;
+var _oldLeft = 0;
+var _oldTop = 0;// we temporarily increase the z-index during drag
 $("<style type='text/css'> .drag{ position:relative; } </style>").appendTo("head");
 
 // The relevant events belong to the document: onMouseDown, onMouseMove, and onMouseUp.  Attempting to make drag and drop using onMouseMove of an element will result in buggy operation, as the cursor tends to jump outside of the element when it is moved quickly; when this happens, onMouseMove will stop firing until the mouse moves back over the element. Clearly, this is not desirable, so the document's mouse events are used.
@@ -182,27 +184,28 @@ function InitDragDrop()
 function OnMouseDown(e)
 {
 	// IE is retarded and doesn't pass the event object
-	if (e == null) 
-		e = window.event; 
+	if (e == null){
+		e = window.event;
+    }
 
 	// IE uses srcElement, others use target
 	var target = e.target != null ? e.target : e.srcElement;
 
-	console.log(target.className.indexOf('drag') >= 0 
-				? 'draggable element clicked' 
+	console.log(target.className.indexOf('drag') >= 0
+				? 'draggable element clicked'
 				: 'NON-draggable element clicked');
 
 	// for IE, left click == 1
 	// for Firefox, left click == 0
-	if ((e.button == 1 && window.event != null || 
+	if ((e.button == 1 && window.event != null ||
 		 e.button == 0) && 
 		target.className.indexOf('drag') >= 0)
 	{
 		console.log("Starting drag");
-        
+
         // Set all draggable items to half opacity to cover up the hack I've done
         $(".drag").css("opacity","0.5");
-        
+
 		// grab the mouse position
 		_startX = e.clientX;
 		_startY = e.clientY;
@@ -219,7 +222,6 @@ function OnMouseDown(e)
 
 		// we need to access the element in OnMouseMove
 		_dragElement = target;
-        
 
 		// tell our code to start moving the element with the mouse
 		document.onmousemove = OnMouseMove;
@@ -240,8 +242,9 @@ function OnMouseDown(e)
 // Once OnMouseMove is wired up, it will fire whenever the mouse moves:
 function OnMouseMove(e)
 {
-	if (e == null) 
-		var e = window.event; 
+	if (e == null){
+		e = window.event;
+    }
 
 	// this is the actual "drag code"
 	_dragElement.style.left = (_offsetX + e.clientX - _startX) + 'px';
@@ -255,7 +258,7 @@ function OnMouseUp(e)
 	{
         // Set all draggable items to back to full opacity to cover up the hack I've done
         $(".drag").css("opacity","1");
-        
+
 		_dragElement.style.zIndex = _oldZIndex;
 		_dragElement.style.left = _oldLeft;
 		_dragElement.style.top = _oldTop;
@@ -273,20 +276,20 @@ function OnMouseUp(e)
 		var targetElement = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
         $(targetElement).closest("td").css({ "background" : $(targetElement).attr("data-old_background") });
         $(targetElement).closest("td").css({ "opacity" : "1" });
-        
+
         var originalRankIndex = $(_dragElement).closest("tr").next().next().find("td").eq($(_dragElement).closest("td").index()).find("input[type=text]").val() - 1;
         var targetRankIndex = $(targetElement).closest("tr").next().next().find("td").eq($(targetElement).closest("td").index()).find("input[type=text]").val() - 1;
 		if (targetElement != _dragElement) {
             // If it's an image, we will be swapping the two items
             if ($(targetElement).is("img")) {
                 console.log("Swapping items at ranks: " + originalRankIndex + ", " + targetRankIndex);
-                
+
                 // store temp for the swap
                 var temp = new Object();
                 temp.imageTd = ordering[originalRankIndex].imageTd
                 temp.quantity = ordering[originalRankIndex].quantity
                 temp.rankTd = ordering[originalRankIndex].rankTd
-                
+
                 ordering[originalRankIndex].imageTd = ordering[targetRankIndex].imageTd
                 ordering[originalRankIndex].quantity = ordering[targetRankIndex].quantity
                 ordering[originalRankIndex].rankTd = ordering[targetRankIndex].rankTd
@@ -299,7 +302,7 @@ function OnMouseUp(e)
                 var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
                 applyOrderingItemToGalleryTds(tdArray, ordering, originalRankIndex);
                 applyOrderingItemToGalleryTds(tdArray, ordering, targetRankIndex);
-                
+
                 // Reapply the rank numbers
                 rerankAllObjects(Math.min(originalRankIndex, targetRankIndex), Math.max(originalRankIndex, targetRankIndex));
             } else if ($(targetElement).is("td") && $(targetElement).find("img").length > 0) {
@@ -311,10 +314,10 @@ function OnMouseUp(e)
                     console.log("Dropped on the right side of the td, adjusting rank");
                     targetRankIndex++;
                 }
-                
+
                 // If the target is a td element that contains an image, assume we placed the dragged item between items and need to splice it in
                 console.log("Splicing items at ranks: " + originalRankIndex + ", " + targetRankIndex);
-                
+
                 // Copy new item over to avoid referencing issues on deletes
                 var movedItem = new Object();
                 movedItem.imageTd = ordering[originalRankIndex].imageTd;
@@ -328,7 +331,7 @@ function OnMouseUp(e)
                 ordering.splice(targetRankIndex, 0, movedItem);
 
                 // reapply the ordered item td list to the table
-                var tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
+                tdArray = $("form[name=gallery_form]").find("tbody").first().find("img").closest("td").toArray();
                 var startIndex = Math.max(0,Math.min(originalRankIndex,targetRankIndex)); // take the max with 0 just to be sure no out-of-bounds occurs
                 var endIndex = Math.min(tdArray.length,Math.max(originalRankIndex,targetRankIndex)); // take the min with array length just to be sure no out-of-bounds occurs
                 console.log("Reordering indexes: " + startIndex + "-" + endIndex);
@@ -347,7 +350,7 @@ function OnMouseUp(e)
 		//  END CODE MODIFICATIONS BY: bajuwa
 		// -----------------------------------
 
-		// this is how we know we're not dragging      
+		// this is how we know we're not dragging
 		_dragElement = null;
 
 		console.log('mouse up');
